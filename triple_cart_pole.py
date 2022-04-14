@@ -18,6 +18,7 @@ from pydrake.all import (
 )
 import os
 import numpy as np
+from matplotlib import pyplot as plt
 
 
 # %%
@@ -60,7 +61,7 @@ def simulate_triple_cartpole():
     # Setup visualization
     MeshcatVisualizerCpp.AddToBuilder(builder, scene_graph, meshcat)
     meshcat.Delete()
-    meshcat.Set2dRenderMode(xmin=-5, xmax=5, ymin=-5.0, ymax=5)
+    meshcat.Set2dRenderMode(xmin=-3, xmax=3, ymin=-1.0, ymax=4)
 
     # finish building the block diagram
     diagram = builder.Build()
@@ -71,23 +72,59 @@ def simulate_triple_cartpole():
 
     context = simulator.get_mutable_context()
     context.SetTime(0)
-    context.SetContinuousState(np.array([-2, 0.95*np.pi, 1.05*np.pi, .01*np.pi, 0, 0, 0, 0]))
+    context.SetContinuousState(np.array([-2, 0.95*np.pi, 1.05*np.pi, .02*np.pi, 0, 0, 0, 0]))
 
     # run simulation
     meshcat.AddButton("Stop Simulation")
     simulator.Initialize()
     simulator.set_target_realtime_rate(1.0)
+    
+    state_traj = []
+    input("Press Enter to start simulation")
+    
     while meshcat.GetButtonClicks("Stop Simulation") < 1:
-        if simulator.get_context().get_time() > 20:
+        print('Time:', simulator.get_context().get_time())
+        x = simulator.get_context().get_continuous_state().get_generalized_position().GetAtIndex(0)
+        
+        state = simulator.get_context().get_continuous_state().get_vector().CopyToVector()
+        state_traj.append(state)
+        if simulator.get_context().get_time() >= 10:
             break
-        simulator.AdvanceTo(simulator.get_context().get_time() + 1.0)
+        simulator.AdvanceTo(simulator.get_context().get_time() + 0.01)
     meshcat.DeleteAddedControls()
+    
+    return state_traj
 
+state_traj = simulate_triple_cartpole()
 
-simulate_triple_cartpole()
+# %%
+# Create a plot of the showing the evolution of state variables over time
+fig = plt.figure(figsize=(10,6))
+ax = fig.add_subplot(311)
+plt.plot([state[0] for state in state_traj])
+plt.title('x')
+
+ax = fig.add_subplot(312)
+plt.plot([state[1] for state in state_traj])
+plt.plot([state[2] for state in state_traj])
+# NOTE: Added pi to joint angle 3 so all angles are of comparable magnitude
+plt.plot([state[3]+np.pi for state in state_traj])
+plt.title('Joint Angles')
+
+ax = fig.add_subplot(313)
+plt.plot([state[5] for state in state_traj])
+plt.plot([state[6] for state in state_traj])
+plt.plot([state[7] for state in state_traj])
+plt.title('Joint Velocities')
+plt.show()
+
 
 
 # %%
-
-
-
+# An example of a phase portait which could be used for showing ROA slices
+fig = plt.figure()
+ax = fig.add_subplot(111)
+plt.plot([state[1] for state in state_traj],[state[2] for state in state_traj])
+ax.set_aspect('equal', adjustable='box')
+plt.show()
+# %%
