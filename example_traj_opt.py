@@ -143,8 +143,8 @@ def dircol_cartpole():
     plant = MultibodyPlant(time_step=0.0)
     scene_graph = SceneGraph()
     plant.RegisterAsSourceForSceneGraph(scene_graph)
-    file_name = FindResource("models/cartpole.urdf")
-    Parser(plant).AddModelFromFile(file_name)
+    #file_name = FindResource("models/cartpole.urdf")
+    Parser(plant).AddModelFromFile("triple_cartpole.urdf")
     plant.Finalize()
 
     context = plant.CreateDefaultContext()
@@ -159,16 +159,16 @@ def dircol_cartpole():
 
     dircol.AddEqualTimeIntervalsConstraints()
 
-    initial_state = (0., 0., 0., 0.)
+    initial_state = (0., 0., 0., 0., 0., 0., 0., 0.)
     prog.AddBoundingBoxConstraint(initial_state, initial_state,
-                                  dircol.initial_state())
-    # More elegant version is blocked by drake #8315:
-    # prog.AddLinearConstraint(dircol.initial_state() == initial_state)
+                                 dircol.initial_state())
+    #More elegant version is blocked by drake #8315:
+    #prog.AddLinearConstraint(dircol.initial_state() == initial_state)
 
-    final_state = (0., np.pi, 0., 0.)
+    final_state = (0., np.pi, np.pi, 0., 0., 0., 0., 0.)
     prog.AddBoundingBoxConstraint(final_state, final_state,
-                                  dircol.final_state())
-    # prog.AddLinearConstraint(dircol.final_state() == final_state)
+                                 dircol.final_state())
+    #prog.AddLinearConstraint(dircol.final_state() == final_state)
 
     R = 10  # Cost on input "effort".
     u = dircol.input()
