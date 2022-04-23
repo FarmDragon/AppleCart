@@ -1,0 +1,19 @@
+{
+    "tests": [
+        {
+            "name": "Test RRT",
+            "score": 0.0,
+            "max_score": 7,
+            "output": "Test Failed: \nArrays are not almost equal to 6 decimals\nThe start location of the path is not the correct start location\nMismatched elements: 2 / 2 (100%)\nMax absolute difference: 8.05620554\nMax relative difference: 2.06521784\n x: array([11,  0])\n y: array([3.588652, 8.056206])\n"
+        },
+        {
+            "name": "Test RRT*",
+            "score": 0.0,
+            "max_score": 7,
+            "output": "Test Failed: \nArrays are not almost equal to 6 decimals\nThe start location of the path is not the correct start location\nMismatched elements: 2 / 2 (100%)\nMax absolute difference: 7.74324848\nMax relative difference: 1.21327908\n x: array([11,  0])\n y: array([4.970001, 7.743248])\n"
+        }
+    ],
+    "leaderboard": [],
+    "execution_time": "1.33",
+    "score": 0.0
+}
