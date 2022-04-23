@@ -127,7 +127,7 @@ def test_compute_u_star():
         dstate_dynamics_du.shape, (num_states, num_inputs, num_samples)
     )
     answer = np.einsum("uu,xut->uxt", R_inverse, dstate_dynamics_du)
-    # todo: what would I expect this to look like? create an assert
+    # TODO: what would I expect this to look like? create an assert
     # sort of like this, but not quite?
     # np.array([
     #         [[.1, .2, .3, .4], [1, 2, 3, 4]],
@@ -138,7 +138,7 @@ def test_compute_u_star():
     answer = np.einsum("uu,xut,xt->ut", R_inverse, dstate_dynamics_du, dJdX)
     np.testing.assert_equal(answer.shape, (num_inputs, num_samples))
     print(answer)
-    # todo: test the expected output array
+    # TODO: test the expected output array
     # np.testing.assert_equal(
     #     answer,
     #     np.array([
