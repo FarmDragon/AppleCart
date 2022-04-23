@@ -27,3 +27,16 @@ def compute_state_cost(Q, target_state, data):
     if len(data.shape) != 2:
         data = data.reshape(-1, 1)
     return compute_quadratic_cost(Q, data - target_state)
+
+
+def compute_u_star(R_diag, dJdX, dstate_dynamics_du):
+    """
+    Compute optimal control given R, dJdX, and dXdU
+
+    R_diag is an array of size num_inputs that is the diagonal entries of R
+    dJdX is of shape (num_states x num_samples)
+    dstate_dynamics_du are (num_states x num_inputs x num_samples)
+    return u_star of shape (num_inputs x num_samples)
+    """
+    R_inverse = np.diag(1 / R_diag)
+    return -1 / 2 * np.einsum("uu,xut,xt->ut", R_inverse, dstate_dynamics_du, dJdX)
