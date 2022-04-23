@@ -1,9 +1,16 @@
 {
     "python.formatting.provider": "black",
     "cSpell.words": [
+        "asfortranarray",
+        "einsum",
+        "hstack",
+        "randn",
+        "vstack",
         "xmax",
         "xmin",
         "ymax",
         "ymin"
-    ]
+    ],
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true
 }
