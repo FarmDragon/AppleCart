@@ -1,4 +1,5 @@
 import numpy as np
+from IPython.display import HTML, display
 from pydrake.all import (
     RandomGenerator,
     LeafSystem,
@@ -57,7 +58,6 @@ def ContinuousFittedValueIteration(
     state_samples,
     time_step=0.01,
     discount_factor=1.0,
-    input_port_index=0,
     lr=0.001,
     minibatch=None,
     epochs=1000,
@@ -65,7 +65,7 @@ def ContinuousFittedValueIteration(
     input_limits=None,
     target_state=None,
 ):
-    input_port = plant.get_input_port(input_port_index)
+    input_port = plant.get_actuation_input_port()
     num_states = plant.num_continuous_states()
     num_inputs = input_port.size()
     if target_state is not None:
@@ -190,7 +190,6 @@ class ContinuousFittedValueIterationPolicy(LeafSystem):
         value_mlp_context,
         R_diag,
         compute_u_star,
-        input_port_index=0,
         input_limits=None,
     ):
         LeafSystem.__init__(self)
@@ -210,7 +209,7 @@ class ContinuousFittedValueIterationPolicy(LeafSystem):
         self.R_diag = R_diag
         self.input_limits = input_limits
         self.DeclareVectorInputPort("plant_state", self.num_plant_states)
-        self._plant_input_port = self._plant.get_input_port(input_port_index)
+        self._plant_input_port = self._plant.get_actuation_input_port()
         self.DeclareVectorOutputPort(
             "output", self._plant_input_port.size(), self.CalcOutput
         )
@@ -245,3 +244,23 @@ class ContinuousFittedValueIterationPolicy(LeafSystem):
             u_star = np.clip(u_star, self.input_limits[0], self.input_limits[1])
         for i in range(num_inputs):
             output.SetAtIndex(i, u_star[i])
+
+
+def simulate_and_animate(starting_state, visualizer, simulator, sim_time=5):
+    """
+    Simulates the system and produce a video
+    """
+
+    visualizer.start_recording()
+
+    context = simulator.get_mutable_context()
+    context.SetTime(0.0)
+    context.SetContinuousState(starting_state)
+    simulator.Initialize()
+    simulator.AdvanceTo(sim_time)
+
+    visualizer.stop_recording()
+
+    ani = visualizer.get_recording_as_animation()
+    display(HTML(ani.to_jshtml()))
+    visualizer.reset_recording()

@@ -9,6 +9,7 @@
         "einsum",
         "hstack",
         "Jnext",
+        "jshtml",
         "randn",
         "urdf",
         "vstack",
@@ -16,6 +17,7 @@
         "xmin",
         "Xnext",
         "Xprev",
+        "ylim",
         "ymax",
         "ymin"
     ],
