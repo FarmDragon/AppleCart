@@ -1,6 +1,7 @@
 {
     "python.formatting.provider": "black",
     "cSpell.words": [
+        "acrobot",
         "asfortranarray",
         "atleast",
         "dloss",
@@ -9,6 +10,7 @@
         "hstack",
         "Jnext",
         "randn",
+        "urdf",
         "vstack",
         "xmax",
         "xmin",

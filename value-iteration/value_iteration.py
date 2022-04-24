@@ -1,7 +1,5 @@
 import numpy as np
 from pydrake.all import (
-    MultilayerPerceptron,
-    PerceptronActivationType,
     RandomGenerator,
     LeafSystem,
 )
@@ -130,7 +128,7 @@ def ContinuousFittedValueIteration(
     dloss_dparams = np.zeros(value_mlp.num_parameters())
 
     last_loss = np.inf
-    for epoch in range(epochs):
+    for _ in range(epochs):
         if minibatch:
             batch = np.random.randint(0, N, minibatch)
             # always include the target state in the batch
@@ -162,7 +160,7 @@ def ContinuousFittedValueIteration(
 
         # Create the target network
         Jd[:] = time_step * G + discount_factor * Jnext
-
+        loss_over_time = []
         for i in range(optimization_steps_per_epoch):
             # low pass filter target network
             if (i + 1) % 50:
@@ -173,16 +171,16 @@ def ContinuousFittedValueIteration(
             loss = value_mlp.BackpropagationMeanSquaredError(
                 mlp_context, state_samples[:, batch], Jd, dloss_dparams
             )
+            loss_over_time.append(loss)
             optimizer.step(loss, dloss_dparams)
         if not minibatch and np.linalg.norm(last_loss - loss) < 1e-8:
             break
         last_loss = loss
-        print(f"epoch {epoch}: loss = {loss}")
 
-    return mlp_context
+    return (mlp_context, loss_over_time)
 
 
-class ContinuousFittedValueIterationPolicyComputeUStar(LeafSystem):
+class ContinuousFittedValueIterationPolicy(LeafSystem):
     """A Drake system to wire our controller to the Drake simulator"""
 
     def __init__(
