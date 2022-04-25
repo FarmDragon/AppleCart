@@ -20,7 +20,7 @@ class Cart:
 
     def __init__(self) -> None:
         self.x = [0,0,0,0,0,0,0,0] # state of the cart
-        self.meshCat = StartMeshcat()
+        self.meshcat = StartMeshcat()
         builder = DiagramBuilder()
 
         # instantiate the cart-pole and the scene graph
@@ -29,11 +29,28 @@ class Cart:
         plant.Finalize()
 
         # set initial unstable equilibrium point
-        self.context = plant.CreateDefaultContext()
+        context = plant.CreateDefaultContext()
         x_star = [0, np.pi, np.pi, 0, 0, 0, 0, 0]
-        self.context.get_mutable_continuous_state_vector().SetFromVector(x_star)
+        context.get_mutable_continuous_state_vector().SetFromVector(x_star)
 
-        Cart.__setup_visualization(builder, scene_graph, self.meshCat)
+        # weight matrices for the lqr controller
+        Q = np.diag((10., 10., 10., 10., 1., 1., 1., 1.))
+        R = np.eye(1)
+
+        # Setup input
+        plant.get_actuation_input_port().FixValue(context, [0])
+        input_i = plant.get_actuation_input_port().get_index()
+        lqr = LinearQuadraticRegulator(plant, context, Q, R, input_port_index=int(input_i))
+        lqr = builder.AddSystem(lqr)
+        output_i = plant.get_state_output_port().get_index()
+        cartpole_lin = Linearize(plant,
+                                context,
+                                input_port_index=input_i,
+                                output_port_index=output_i)
+        builder.Connect(plant.get_state_output_port(), lqr.get_input_port(0))
+        builder.Connect(lqr.get_output_port(0), plant.get_actuation_input_port())
+
+        Cart.__setup_visualization(builder, scene_graph, self.meshcat)
 
         self.diagram = builder.Build()
 
@@ -57,9 +74,9 @@ class Cart:
         self.meshcat.AddButton("Stop Simulation")
         self.simulator.Initialize()
         self.simulator.set_target_realtime_rate(1.0)
+        webbrowser.open(self.meshcat.web_url())
         while self.meshcat.GetButtonClicks("Stop Simulation") < 1:
             if self.simulator.get_context().get_time() > 20:
                 break
             self.simulator.AdvanceTo(self.simulator.get_context().get_time() + 1.0)
         self.meshcat.DeleteAddedControls()
-        webbrowser.open(f"localhost:{self.meshCat}")
