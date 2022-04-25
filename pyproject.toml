@@ -21,10 +21,12 @@ gradescope-utils = "^0.4.0"
 mpld3 = "^0.5.7"
 altair = "^4.2.0"
 pandas = "^1.4.1"
+pytest-plt = "^1.1.0"
+pytest-xdist = "^2.5.0"
 
 [tool.poetry.dev-dependencies]
 jupyter = "^1.0.0"
-pytest = "^5.2"
+pytest = "^7.1.2"
 black = {version = "^22.1.0", allow-prereleases = true}
 
 [build-system]
