@@ -45,7 +45,7 @@ class Cart:
         output_i = plant.get_state_output_port().get_index()
         cartpole_lin = Linearize(plant,
                                 context,
-                                input_port_index=input_i,
+                                 input_port_index=input_i,
                                 output_port_index=output_i)
         builder.Connect(plant.get_state_output_port(), lqr.get_input_port(0))
         builder.Connect(lqr.get_output_port(0), plant.get_actuation_input_port())
