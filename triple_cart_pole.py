@@ -41,7 +41,7 @@ def simulate_triple_cartpole():
     context.get_mutable_continuous_state_vector().SetFromVector(x_star)
 
     # weight matrices for the lqr controller
-    Q = np.diag((10., 10., 10., 10., 1., 1., 1., 1.))
+    Q = np.diag((10.0, 10.0, 10.0, 10.0, 1.0, 1.0, 1.0, 1.0))
     R = np.eye(1)
 
     # Setup input
@@ -50,10 +50,9 @@ def simulate_triple_cartpole():
     lqr = LinearQuadraticRegulator(plant, context, Q, R, input_port_index=int(input_i))
     lqr = builder.AddSystem(lqr)
     output_i = plant.get_state_output_port().get_index()
-    cartpole_lin = Linearize(plant,
-                            context,
-                            input_port_index=input_i,
-                            output_port_index=output_i)
+    cartpole_lin = Linearize(
+        plant, context, input_port_index=input_i, output_port_index=output_i
+    )
     builder.Connect(plant.get_state_output_port(), lqr.get_input_port(0))
     builder.Connect(lqr.get_output_port(0), plant.get_actuation_input_port())
 
@@ -71,7 +70,9 @@ def simulate_triple_cartpole():
 
     context = simulator.get_mutable_context()
     context.SetTime(0)
-    context.SetContinuousState(np.array([-2, 0.95*np.pi, 1.05*np.pi, .01*np.pi, 0, 0, 0, 0]))
+    context.SetContinuousState(
+        np.array([-2, 0.95 * np.pi, 1.05 * np.pi, 0.01 * np.pi, 0, 0, 0, 0])
+    )
 
     # run simulation
     meshcat.AddButton("Stop Simulation")
@@ -88,6 +89,3 @@ simulate_triple_cartpole()
 
 
 # %%
-
-
-
