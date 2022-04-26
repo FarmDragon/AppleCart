@@ -20,7 +20,7 @@ from pydrake.all import (Box, DiagramBuilder, DirectCollocation,
                          MultibodyPositionToGeometryPose, Parser,
                          PiecewisePolynomial, PlanarSceneGraphVisualizer,
                          Point, PointCloud, Rgba, RigidTransform,
-                         RotationMatrix, SceneGraph, Simulator, Solve, Sphere,
+                         RotationMatrix, SceneGraph, Simulator, Solve, Sphere, Cylinder,
                          StartMeshcat, TrajectorySource, Variable, eq, MeshcatVisualizerCpp)
 from pydrake.examples.acrobot import AcrobotGeometry, AcrobotPlant
 from pydrake.examples.pendulum import PendulumPlant, PendulumState
@@ -148,6 +148,13 @@ context.SetTime(0)
 meshcat.AddButton("Stop Simulation")
 meshcat.SetObject("apple", Sphere(.1), Rgba(1, 0, 0, 1))
 meshcat.SetTransform("apple", RigidTransform([0,0,3]))
+
+
+meshcat.SetObject("branch", Cylinder(0.25, 1), Rgba(0.5, 0.4, 0.3, 1))
+
+R_GgraspO = RotationMatrix.MakeXRotation(np.pi/2.0).multiply(
+        RotationMatrix.MakeZRotation(np.pi/2.0))
+meshcat.SetTransform("branch", RigidTransform(R_GgraspO,[1,0,2]))
 
 # Visualize the obstacles
 meshcat.SetObject("wall1", Box(1, 1, 1), Rgba(0.8, 0.4, 0, 1))
