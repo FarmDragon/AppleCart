@@ -5,6 +5,9 @@ from pydrake.all import (
     LeafSystem,
 )
 from underactuated.optimizers import Adam
+import altair as alt
+import pandas as pd
+import seaborn as sns
 
 
 def compute_quadratic_cost(Q, data):
@@ -212,7 +215,10 @@ class ContinuousFittedValueIterationPolicy(LeafSystem):
         self.R_diag = R_diag
         self.input_limits = input_limits
         self.DeclareVectorInputPort("plant_state", self.num_plant_states)
-        self._plant_input_port = self._plant.get_actuation_input_port()
+        if "get_actuation_input_port" in dir(self._plant):
+            self._plant_input_port = self._plant.get_actuation_input_port()
+        else:
+            self._plant_input_port = self._plant.get_input_port(0)
         self.DeclareVectorOutputPort(
             "output", self._plant_input_port.size(), self.CalcOutput
         )
@@ -267,3 +273,52 @@ def simulate_and_animate(starting_state, visualizer, simulator, sim_time=5):
     ani = visualizer.get_recording_as_animation()
     display(HTML(ani.to_jshtml()))
     visualizer.reset_recording()
+
+
+def plot_loss(loss_over_time):
+    losses = pd.DataFrame({"epoch": range(len(loss_over_time)), "loss": loss_over_time})
+    return (
+        alt.Chart(losses)
+        .mark_line()
+        .encode(
+            x="epoch",
+            y="loss",
+        )
+    )
+
+
+def plot_J(state_grid, J):
+    alt.data_transformers.disable_max_rows()
+    theta_by_theta_dot = state_grid[0]
+    theta_dot_by_theta = state_grid[1]
+
+    source = pd.DataFrame(
+        {
+            "theta": theta_by_theta_dot.ravel(),
+            "theta_dot": theta_dot_by_theta.ravel(),
+            "J": J.ravel(),
+        }
+    )
+
+    source = source.pivot("theta_dot", "theta", "J")
+    ax = sns.heatmap(source, cmap="RdBu_r")
+
+    def fmt(s):
+        try:
+            n = "{:.2f}".format(float(s))
+        except:
+            n = ""
+        return n
+
+    def fmt_angle(s):
+        try:
+            n = "{:.2f} τ".format(float(s) / 2 / np.pi)
+        except:
+            n = ""
+        return n
+
+    ax.invert_yaxis()
+    _ = ax.set_xticklabels(
+        [fmt_angle(label.get_text()) for label in ax.get_xticklabels()]
+    )
+    _ = ax.set_yticklabels([fmt(label.get_text()) for label in ax.get_yticklabels()])
