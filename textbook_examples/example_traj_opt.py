@@ -75,14 +75,14 @@ dircol.AddFinalCost(dircol.time())
 # Providing the initial guess for x(.) as a straight line trajectory 
 # between the start and the goal
 initial_x_trajectory = PiecewisePolynomial.FirstOrderHold(
-    [0., 4.], np.column_stack((initial_state, final_state)))  # yapf: disable
+    [0., 4.], np.column_stack((initial_state, final_state)))
 dircol.SetInitialTrajectory(PiecewisePolynomial(), initial_x_trajectory)
 
 
 # Add obstacles
 x = dircol.state()
-dircol.AddConstraintToAllKnotPoints(x[0]<= 2)
-dircol.AddConstraintToAllKnotPoints(x[0]>= -2)
+dircol.AddConstraintToAllKnotPoints(x[0] <= 2)
+dircol.AddConstraintToAllKnotPoints(x[0] >= -2)
 
 # Add obstacles
 # for i in range(NUM_BREAKPOINTS*len(initial_state)):
