@@ -65,7 +65,10 @@ def ContinuousFittedValueIteration(
     input_limits=None,
     target_state=None,
 ):
-    input_port = plant.get_actuation_input_port()
+    if "get_actuation_input_port" in dir(plant):
+        input_port = plant.get_actuation_input_port()
+    else:
+        input_port = plant.get_input_port(0)
     num_states = plant.num_continuous_states()
     num_inputs = input_port.size()
     if target_state is not None:
