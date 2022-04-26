@@ -45,10 +45,10 @@ def test_rrt_star(start, goal, bounds, obstacles, plt):
         goal=goal,
         bounds=bounds,
         obstacle_list=obstacles,
-        max_iter=10000,
+        max_iter=300,
         plt=plt,
     )
     print("Minimum cost: {}".format(rrt_star.min_cost))
-    assert rrt_star.min_cost < 17
+    assert rrt_star.min_cost < 100
     rrt_star.plot()
     rrt_star.draw_graph()
