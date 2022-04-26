@@ -13,13 +13,17 @@
         "randn",
         "urdf",
         "vstack",
+        "xaxis",
         "xmax",
         "xmin",
         "Xnext",
         "Xprev",
+        "xticklabels",
+        "yaxis",
         "ylim",
         "ymax",
-        "ymin"
+        "ymin",
+        "yticklabels"
     ],
     "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true,
