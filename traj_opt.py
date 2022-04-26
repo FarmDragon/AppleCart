@@ -1,7 +1,8 @@
 # %% [markdown]
 # # Triple cart-pole
 
-# %%
+# %% 
+# All necessary imports
 import sys
 import time
 
@@ -29,13 +30,16 @@ from underactuated.jupyter import AdvanceToAndVisualize
 from underactuated.meshcat_utils import draw_points, set_planar_viewpoint
 from underactuated.pendulum import PendulumVisualizer
 
-# %%
+# %% 
+# Start Meshcat
 # Start the visualizer (run this cell only once, each instance consumes a port)
 meshcat = StartMeshcat()
 
-# %%
+# %% 
+# Trajectory optimization simulation
 NUM_BREAKPOINTS = 21
 SIMULATION_TIMESTEP = 0.01
+FLAT_SIMULATION = False
 
 plant = MultibodyPlant(time_step=0.0)
 scene_graph = SceneGraph()
@@ -86,7 +90,7 @@ dircol.SetInitialTrajectory(PiecewisePolynomial(), initial_x_trajectory)
 x = dircol.state()
 dircol.AddConstraintToAllKnotPoints(x[0] <= 2)
 dircol.AddConstraintToAllKnotPoints(x[0] >= -2)
-#meshcat.SetObject("obstacle", Box(np.sqrt(2), 1, np.sqrt(2)), Rgba(1, 0, 0, 1))
+
 
 # Add obstacles
 # for i in range(NUM_BREAKPOINTS*len(initial_state)):
@@ -128,7 +132,9 @@ builder.Connect(pos_to_pose.get_output_port(),
 
 MeshcatVisualizerCpp.AddToBuilder(builder, scene_graph, meshcat)
 meshcat.Delete()
-meshcat.Set2dRenderMode(xmin=-3, xmax=3, ymin=-1.0, ymax=4)
+
+if FLAT_SIMULATION:
+    meshcat.Set2dRenderMode(xmin=-3, xmax=3, ymin=-1.0, ymax=4)
 
 diagram = builder.Build()
 
@@ -142,6 +148,15 @@ context.SetTime(0)
 meshcat.AddButton("Stop Simulation")
 meshcat.SetObject("apple", Sphere(.1), Rgba(1, 0, 0, 1))
 meshcat.SetTransform("apple", RigidTransform([0,0,3]))
+
+# Visualize the obstacles
+meshcat.SetObject("wall1", Box(1, 1, 1), Rgba(0.8, 0.4, 0, 1))
+meshcat.SetTransform("wall1", RigidTransform([-3,0,0]))
+
+meshcat.SetObject("wall2", Box(1, 1, 1), Rgba(0.8, 0.4, 0, 1))
+meshcat.SetTransform("wall2", RigidTransform([3,0,0]))
+
+
 simulator.Initialize()
 simulator.set_target_realtime_rate(1.0)
 
