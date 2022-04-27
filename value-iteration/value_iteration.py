@@ -317,5 +317,7 @@ def plot_J(data, x, y, color="turbo"):
         [
             fmt_angle(label.get_text()) if y["is_angle"] else fmt(label.get_text())
             for label in ax.get_yticklabels()
-        ]
+        ],
+        rotation=0,
+        horizontalalignment="right",
     )
