@@ -8,6 +8,7 @@ from underactuated.optimizers import Adam
 import altair as alt
 import pandas as pd
 import seaborn as sns
+from IPython.display import display, clear_output
 
 
 def compute_quadratic_cost(Q, data):
@@ -134,7 +135,7 @@ def ContinuousFittedValueIteration(
     dloss_dparams = np.zeros(value_mlp.num_parameters())
 
     last_loss = np.inf
-    for _ in range(epochs):
+    for epoch in range(epochs):
         if minibatch:
             batch = np.random.randint(0, N, minibatch)
             # always include the target state in the batch
@@ -182,6 +183,8 @@ def ContinuousFittedValueIteration(
         if not minibatch and np.linalg.norm(last_loss - loss) < 1e-8:
             break
         last_loss = loss
+        clear_output(wait=True)
+        display("loss: {:.6} epoch: {:}/{:}".format(last_loss, epoch, epochs))
 
     return (mlp_context, loss_over_time)
 
