@@ -287,21 +287,8 @@ def plot_loss(loss_over_time):
     )
 
 
-def plot_J(state_grid, J):
-    alt.data_transformers.disable_max_rows()
-    theta_by_theta_dot = state_grid[0]
-    theta_dot_by_theta = state_grid[1]
-
-    source = pd.DataFrame(
-        {
-            "theta": theta_by_theta_dot.ravel(),
-            "theta_dot": theta_dot_by_theta.ravel(),
-            "J": J.ravel(),
-        }
-    )
-
-    source = source.pivot("theta_dot", "theta", "J")
-    ax = sns.heatmap(source, cmap="RdBu_r")
+def plot_J(data, x, y, color="turbo"):
+    data = data.pivot(y["name"], x["name"], "J")
 
     def fmt(s):
         try:
@@ -317,8 +304,18 @@ def plot_J(state_grid, J):
             n = ""
         return n
 
+    ax = sns.heatmap(data, cmap=color)
+
     ax.invert_yaxis()
     _ = ax.set_xticklabels(
-        [fmt_angle(label.get_text()) for label in ax.get_xticklabels()]
+        [
+            fmt_angle(label.get_text()) if x["is_angle"] else fmt(label.get_text())
+            for label in ax.get_xticklabels()
+        ]
     )
-    _ = ax.set_yticklabels([fmt(label.get_text()) for label in ax.get_yticklabels()])
+    _ = ax.set_yticklabels(
+        [
+            fmt_angle(label.get_text()) if y["is_angle"] else fmt(label.get_text())
+            for label in ax.get_yticklabels()
+        ]
+    )
