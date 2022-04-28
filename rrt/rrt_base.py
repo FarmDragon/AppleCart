@@ -19,6 +19,7 @@ class RRT:
         goal_sample_rate=0.05,
         max_iter=100,
         distance_function=None,
+        extend_function=None,
         plt=plt,
     ):
         self.start = self.Node(start)
@@ -30,7 +31,8 @@ class RRT:
         self.max_iter = max_iter
         self.obstacle_list = obstacle_list
         self.node_list = []
-        self.distance_function = distance_function
+        self.distance_function = distance_function if distance_function else lambda a,b: np.linalg.norm(a - b)
+        self.extend_function = extend_function if extend_function else lambda f, t: f+(t-f)*self.max_extend_length/self.distance_function(f,t)
         self.plt = plt
         self.path = self.__plan()
 
@@ -69,22 +71,16 @@ class RRT:
 
     def steer(self, from_node, to_node, max_extend_length=np.inf):
         """Connects from_node to a new_node in the direction of to_node
-        with maximum distance max_extend_length
+        with maximum distance max_extend_length.
         """
         new_node = self.Node(to_node.p)
-        d = from_node.p - to_node.p
-        dist = np.linalg.norm(d)
-        if dist > max_extend_length:
-            # rescale the path to the maximum extend_length
-            new_node.p = from_node.p - d / dist * max_extend_length
+        new_node.p = self.extend_function(from_node.p, to_node.p)
         new_node.parent = from_node
         return new_node
 
     def dist_to_goal(self, p):
         """Distance from p to goal"""
-        if self.distance_function:
-            return self.distance_function(p, self.goal.p)
-        return np.linalg.norm(p - self.goal.p)
+        return self.distance_function(p, self.goal.p)
 
     def get_random_node(self):
         """Sample random node inside bounds or sample goal point"""
@@ -97,11 +93,10 @@ class RRT:
             # Select goal point
             rnd = self.Node(self.goal.p)
         return rnd
-
-    @staticmethod
-    def get_nearest_node(node_list, node):
+ 
+    def get_nearest_node(self, node_list, node):
         """Find the nearest node in node_list to node"""
-        dlist = [np.sum(np.square((node.p - n.p))) for n in node_list]
+        dlist = [self.distance_function(node.p, n.p) for n in node_list]
         minind = dlist.index(min(dlist))
         return node_list[minind]
 
@@ -146,7 +141,8 @@ class RRT:
                 self.plt.plot(
                     [node.p[0], node.parent.p[0]], [node.p[1], node.parent.p[1]], "-g"
                 )
-        plt.plot([x for (x, y) in self.path], [y for (x, y) in self.path], "-r")
+        if self.path:
+            plt.plot([x for (x, y) in self.path], [y for (x, y) in self.path], "-r")
 
     def plot(self):
         plt = self.plt
