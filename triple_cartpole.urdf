@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<robot name="DoubleCartPole">
+<robot name="TripleCartPole">
     <link name="base">
         <inertial>
             <origin xyz="0 0 0" />
@@ -66,12 +66,12 @@
 
     <link name="pendulum1">
         <inertial>
-            <origin xyz="0 0 1" />
+            <origin xyz="0 0 -1" />
             <mass value="1" />
         </inertial>
 
         <visual>
-            <origin xyz="0 0 1" />
+            <origin xyz="0 0 -1" />
             <geometry>
                 <sphere radius=".05" />
             </geometry>
@@ -81,7 +81,7 @@
         </visual>
 
         <visual>
-            <origin xyz="0 0 0.5" />
+            <origin xyz="0 0 -0.5" />
             <geometry>
                 <cylinder length="1" radius=".01" />
             </geometry>
@@ -93,12 +93,12 @@
 
     <link name="pendulum2">
         <inertial>
-            <origin xyz="0 0 1" />
-            <mass value="2" />
+            <origin xyz="0 0 -1" />
+            <mass value="1" />
         </inertial>
 
         <visual>
-            <origin xyz="0 0 1" />
+            <origin xyz="0 0 -1" />
             <geometry>
                 <sphere radius=".05" />
             </geometry>
@@ -108,7 +108,7 @@
         </visual>
 
         <visual>
-            <origin xyz="0 0 0.5" />
+            <origin xyz="0 0 -0.5" />
             <geometry>
                 <cylinder length="1" radius=".01" />
             </geometry>
@@ -142,7 +142,7 @@
         <parent link="pendulum1" />
         <child link="pendulum2" />
         <axis xyz="0 -1 0" />
-        <origin xyz="0 0 1"/>
+        <origin xyz="0 0 -1"/>
     </joint>
 
     <transmission type="SimpleTransmission" name="base_force">
