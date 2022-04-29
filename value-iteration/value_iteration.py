@@ -2,13 +2,17 @@ import numpy as np
 from IPython.display import HTML, display
 from pydrake.all import (
     RandomGenerator,
+    DiagramBuilder,
     LeafSystem,
+    AddMultibodyPlantSceneGraph,
+    Parser,
 )
 from underactuated.optimizers import Adam
 import altair as alt
 import pandas as pd
 import seaborn as sns
-from IPython.display import display, clear_output
+from IPython.display import display, clear_output, SVG, display
+import pydot
 
 
 def compute_quadratic_cost(Q, data):
@@ -323,4 +327,25 @@ def plot_J(data, x, y, color="turbo"):
         ],
         rotation=0,
         horizontalalignment="right",
+    )
+
+
+def create_cartpole():
+    # Create the plant
+    builder = DiagramBuilder()
+    plant, _ = AddMultibodyPlantSceneGraph(builder, time_step=0.0)
+    Parser(plant).AddModelFromFile("cartpole.urdf")
+    plant.Finalize()
+    context = plant.CreateDefaultContext()
+    diagram = builder.Build()
+    return (plant, context, diagram)
+
+
+def visualize_system(system):
+    display(
+        SVG(
+            pydot.graph_from_dot_data(system.GetGraphvizString(max_depth=2))[
+                0
+            ].create_svg()
+        )
     )
