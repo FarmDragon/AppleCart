@@ -2,7 +2,7 @@
 # # Triple cart-pole
 
 # %%
-# All necessary imports
+# Import necessary packages
 import sys
 import time
 
@@ -11,38 +11,13 @@ import numpy as np
 import pydot
 from IPython.display import HTML, SVG, clear_output, display
 from pydrake.all import (
-    Box,
-    DiagramBuilder,
-    DirectCollocation,
-    DirectTranscription,
-    FiniteHorizonLinearQuadraticRegulatorOptions,
-    GraphOfConvexSets,
-    HPolyhedron,
-    LinearSystem,
-    LogVectorOutput,
-    MakeFiniteHorizonLinearQuadraticRegulator,
-    MathematicalProgram,
-    MosekSolver,
-    MultibodyPlant,
-    MultibodyPositionToGeometryPose,
-    Parser,
-    PiecewisePolynomial,
-    PlanarSceneGraphVisualizer,
-    Point,
-    PointCloud,
-    Rgba,
-    RigidTransform,
-    RotationMatrix,
-    SceneGraph,
-    Simulator,
-    Solve,
-    Sphere,
-    Cylinder,
-    StartMeshcat,
-    TrajectorySource,
-    Variable,
-    eq,
-    MeshcatVisualizerCpp,
+    Box, DiagramBuilder, DirectCollocation, DirectTranscription,
+    FiniteHorizonLinearQuadraticRegulatorOptions, GraphOfConvexSets,
+    HPolyhedron,LinearSystem, LogVectorOutput, MakeFiniteHorizonLinearQuadraticRegulator,
+    MathematicalProgram, MosekSolver, MultibodyPlant, MultibodyPositionToGeometryPose,
+    Parser,PiecewisePolynomial, PlanarSceneGraphVisualizer, Point, PointCloud,
+    Rgba,RigidTransform, RotationMatrix, SceneGraph, Simulator, Solve, Sphere,
+    Cylinder, StartMeshcat, TrajectorySource, Variable, eq, MeshcatVisualizerCpp,
 )
 from pydrake.examples.acrobot import AcrobotGeometry, AcrobotPlant
 from pydrake.examples.pendulum import PendulumPlant, PendulumState
@@ -58,10 +33,11 @@ from underactuated.pendulum import PendulumVisualizer
 meshcat = StartMeshcat()
 
 # %%
-# Trajectory optimization simulation
+# Solve trajectory optimization
 NUM_BREAKPOINTS = 21
 SIMULATION_TIMESTEP = 0.01
 FLAT_SIMULATION = False
+MAX_SIMULATION_TIME = 6 # seconds after which to stop meshcat simulation
 
 plant = MultibodyPlant(time_step=0.0)
 scene_graph = SceneGraph()
@@ -83,12 +59,12 @@ prog = dircol.prog()
 
 dircol.AddEqualTimeIntervalsConstraints()
 
-initial_state = [0, 0.0, 0.0, np.pi, 0.0, 0.0, 0.0, 0.0]
+initial_state = [0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 prog.AddBoundingBoxConstraint(initial_state, initial_state, dircol.initial_state())
 # More elegant version is blocked by drake #8315:
 # prog.AddLinearConstraint(dircol.initial_state() == initial_state)
 
-final_state = (0.0, np.pi, np.pi, 0.0, 0.0, 0.0, 0.0, 0.0)
+final_state = (0.0, np.pi, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
 prog.AddBoundingBoxConstraint(final_state, final_state, dircol.final_state())
 # prog.AddLinearConstraint(dircol.final_state() == final_state)
 
@@ -110,16 +86,9 @@ dircol.SetInitialTrajectory(PiecewisePolynomial(), initial_x_trajectory)
 
 # Add obstacles
 x = dircol.state()
-dircol.AddConstraintToAllKnotPoints(x[0] <= 2)
-dircol.AddConstraintToAllKnotPoints(x[0] >= -2)
+dircol.AddConstraintToAllKnotPoints(x[0] <= 3)
+dircol.AddConstraintToAllKnotPoints(x[0] >= -3)
 
-
-# Add obstacles
-# for i in range(NUM_BREAKPOINTS*len(initial_state)):
-#     if i % len(initial_state) == 0:
-#         prog.AddLinearConstraint(x(i) <= 1)
-#         print(i)
-# prog.AddLinearConstraint()
 
 # View the constraints that were added to the program
 print("Details of prog:\n", print(prog))
@@ -142,7 +111,9 @@ display(plt.show())
 # Animate the results.
 x_trajectory = dircol.ReconstructStateTrajectory(result)
 
-# TODO(russt): Add some helper methods to make this workflow cleaner.
+# %%
+# Prepare the simulation
+
 builder = DiagramBuilder()
 source = builder.AddSystem(TrajectorySource(x_trajectory))
 builder.AddSystem(scene_graph)
@@ -168,6 +139,7 @@ simulator = Simulator(diagram)
 simulator.set_publish_every_time_step(False)  # makes sim faster
 
 context = simulator.get_mutable_context()
+# %% Run the simulation
 context.SetTime(0)
 
 # run simulation
@@ -195,16 +167,17 @@ simulator.Initialize()
 simulator.set_target_realtime_rate(1.0)
 
 # state_traj = []
-input("Press Enter to start simulation")
+input("Press Enter to start simulation after 2 seconds")
+time.sleep(2) # Give time to switch to meshcat window
 
 while meshcat.GetButtonClicks("Stop Simulation") < 1:
     print("Time:", simulator.get_context().get_time())
     # x = simulator.get_context().get_continuous_state().get_generalized_position().GetAtIndex(0)
 
     state = simulator.get_context().get_continuous_state().get_vector().CopyToVector()
-    print(state)
+    #print(state)
     # state_traj.append(state)
-    if simulator.get_context().get_time() >= 10:
+    if simulator.get_context().get_time() >= 6:
         break
     # Advance the simulation forward
     simulator.AdvanceTo(simulator.get_context().get_time() + SIMULATION_TIMESTEP)
@@ -213,6 +186,8 @@ while meshcat.GetButtonClicks("Stop Simulation") < 1:
 
 meshcat.DeleteAddedControls()
 
+
+# %% Show drake block diagram
 display(
     SVG(
         pydot.graph_from_dot_data(diagram.GetGraphvizString(max_depth=2))[
