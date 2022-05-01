@@ -18,6 +18,7 @@ from pydrake.all import (
     Parser,PiecewisePolynomial, PlanarSceneGraphVisualizer, Point, PointCloud,
     Rgba,RigidTransform, RotationMatrix, SceneGraph, Simulator, Solve, Sphere,
     Cylinder, StartMeshcat, TrajectorySource, Variable, eq, MeshcatVisualizerCpp,
+    AddMultibodyPlantSceneGraph,
 )
 from pydrake.examples.acrobot import AcrobotGeometry, AcrobotPlant
 from pydrake.examples.pendulum import PendulumPlant, PendulumState
@@ -195,4 +196,51 @@ display(
         ].create_svg()
     )
 )
+# %%
+# Run open loop simulation
+builder = DiagramBuilder()
+
+plant, scene_graph = AddMultibodyPlantSceneGraph(builder, time_step=0.0)
+Parser(plant).AddModelFromFile("triple_cartpole.urdf")
+plant.Finalize()
+
+visualizer = MeshcatVisualizerCpp.AddToBuilder(builder, scene_graph,
+                                                meshcat)
+logger = LogVectorOutput(plant.get_state_output_port(), builder)
+meshcat.Delete()
+#meshcat.Set2dRenderMode(xmin=-4, xmax=1, ymin=-1, ymax=1)
+
+traj = builder.AddSystem(TrajectorySource(u_trajectory))
+builder.Connect(traj.get_output_port(), plant.get_actuation_input_port())
+diagram = builder.Build()
+
+simulator = Simulator(diagram)
+context = simulator.get_mutable_context()
+plant_context = plant.GetMyContextFromRoot(context)
+
+ts = np.linspace(u_trajectory.start_time(), u_trajectory.end_time(), 301)
+desired_state = x_trajectory.vector_values(ts)
+
+fig, ax = plt.subplots(figsize=(14,6))
+ax.plot(ts, desired_state[0], label='desired')
+ax.set_xlabel('time')
+ax.set_ylabel('cart position')
+
+context.SetTime(x_trajectory.start_time())
+initial_state = x_trajectory.value(x_trajectory.start_time())
+plant_context.SetContinuousState(initial_state[:])
+
+input("Press Enter to start simulation after 2 seconds")
+time.sleep(2) # Give time to switch to meshcat window
+
+visualizer.StartRecording(False)
+
+simulator.AdvanceTo(x_trajectory.end_time())
+visualizer.PublishRecording()
+
+log = logger.FindLog(context)
+state = log.data()
+
+ax.plot(log.sample_times(), state[0], label=f'actual')
+ax.legend()
 # %%
