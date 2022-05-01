@@ -35,7 +35,6 @@ def test_run_rrt(start, goal, bounds, obstacles, plt):
     np.random.seed(7)
     rrt = RRT(start=start, goal=goal, bounds=bounds, obstacle_list=obstacles)
     rrt.plot()
-    rrt.draw_graph()
 
 
 def test_rrt_star(start, goal, bounds, obstacles, plt):
@@ -51,40 +50,34 @@ def test_rrt_star(start, goal, bounds, obstacles, plt):
     print("Minimum cost: {}".format(rrt_star.min_cost))
     assert rrt_star.min_cost < 100
     rrt_star.plot()
-    rrt_star.draw_graph()
 
 def bound(low, high, value):
     return max(low, min(high, value))
 
+def pendulum_extend_function(f, t):
+    dt = 0.1
+    u = (t[1] - f[1])/dt + np.sin(f[0])
+    u_star = bound(-0.3, 0.3, u)
+    new_node = RRT.Node(np.array([f[0] + f[1]*dt, f[1] - np.sin(f[0])*dt + u_star*dt]))
+    new_node.u = u_star
+    return new_node
+
 def test_rrt_for_simple_pendulum(start, goal, bounds, obstacles, plt):
     """Models a simple pendulum"""
-    dt=0.1
-    def extend_function(f, t):
-        u = (t[1] - f[1])/dt + np.sin(f[0])
-        u_star = bound(-0.3, 0.3, u)
-        return np.array([f[0] + f[1]*dt, f[1] - np.sin(f[0])*dt + u_star*dt])
-
     rrt_star = RRT(
         start=np.array([0, 0]),
         goal=np.array([3, 2]),
         bounds=np.array([-4, 4]),
         obstacle_list=[np.array([1, 1, 0.5])],
         max_extend_length=0.2,
-        max_iter=15000,
-        extend_function=extend_function, 
+        max_iter=1500,
+        extend_function=pendulum_extend_function, 
         plt=plt,
     )
     rrt_star.plot()
-    rrt_star.draw_graph()
 
 def test_rg_rrt_for_simple_pendulum(start, goal, bounds, obstacles, plt):
     """Models a simple pendulum"""
-    dt=0.1
-    def extend_function(f, t):
-        u = (t[1] - f[1])/dt + np.sin(f[0])
-        u_star = bound(-0.3, 0.3, u)
-        return np.array([f[0] + f[1]*dt, f[1] - np.sin(f[0])*dt + u_star*dt])
-
     rrt_star = RRT(
         start=np.array([0, 0]),
         goal=np.array([3, 2]),
@@ -92,11 +85,10 @@ def test_rg_rrt_for_simple_pendulum(start, goal, bounds, obstacles, plt):
         obstacle_list=[np.array([1, 1, 0.5])],
         max_extend_length=0.2,
         max_iter=15000,
-        extend_function=extend_function, 
+        extend_function=pendulum_extend_function, 
         plt=plt,
     )
     rrt_star.plot()
-    rrt_star.draw_graph()
 
 def test_rrt_star_custom_distance_function(start, goal, bounds, obstacles, plt):
     """This should model a car driving through a course - holonomic constraint."""
@@ -119,4 +111,3 @@ def test_rrt_star_custom_distance_function(start, goal, bounds, obstacles, plt):
     print("Minimum cost: {}".format(rrt_star.min_cost))
     assert rrt_star.min_cost < 100
     rrt_star.plot()
-    rrt_star.draw_graph()
