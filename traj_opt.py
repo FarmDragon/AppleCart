@@ -11,13 +11,38 @@ import numpy as np
 import pydot
 from IPython.display import HTML, SVG, clear_output, display
 from pydrake.all import (
-    Box, DiagramBuilder, DirectCollocation, DirectTranscription,
-    FiniteHorizonLinearQuadraticRegulatorOptions, GraphOfConvexSets,
-    HPolyhedron,LinearSystem, LogVectorOutput, MakeFiniteHorizonLinearQuadraticRegulator,
-    MathematicalProgram, MosekSolver, MultibodyPlant, MultibodyPositionToGeometryPose,
-    Parser,PiecewisePolynomial, PlanarSceneGraphVisualizer, Point, PointCloud,
-    Rgba,RigidTransform, RotationMatrix, SceneGraph, Simulator, Solve, Sphere,
-    Cylinder, StartMeshcat, TrajectorySource, Variable, eq, MeshcatVisualizerCpp,
+    Box,
+    DiagramBuilder,
+    DirectCollocation,
+    DirectTranscription,
+    FiniteHorizonLinearQuadraticRegulatorOptions,
+    GraphOfConvexSets,
+    HPolyhedron,
+    LinearSystem,
+    LogVectorOutput,
+    MakeFiniteHorizonLinearQuadraticRegulator,
+    MathematicalProgram,
+    MosekSolver,
+    MultibodyPlant,
+    MultibodyPositionToGeometryPose,
+    Parser,
+    PiecewisePolynomial,
+    PlanarSceneGraphVisualizer,
+    Point,
+    PointCloud,
+    Rgba,
+    RigidTransform,
+    RotationMatrix,
+    SceneGraph,
+    Simulator,
+    Solve,
+    Sphere,
+    Cylinder,
+    StartMeshcat,
+    TrajectorySource,
+    Variable,
+    eq,
+    MeshcatVisualizerCpp,
     AddMultibodyPlantSceneGraph,
 )
 from pydrake.examples.acrobot import AcrobotGeometry, AcrobotPlant
@@ -38,7 +63,7 @@ meshcat = StartMeshcat()
 NUM_BREAKPOINTS = 21
 SIMULATION_TIMESTEP = 0.01
 FLAT_SIMULATION = False
-MAX_SIMULATION_TIME = 6 # seconds after which to stop meshcat simulation
+MAX_SIMULATION_TIME = 6  # seconds after which to stop meshcat simulation
 
 plant = MultibodyPlant(time_step=0.0)
 scene_graph = SceneGraph()
@@ -169,14 +194,14 @@ simulator.set_target_realtime_rate(1.0)
 
 # state_traj = []
 input("Press Enter to start simulation after 2 seconds")
-time.sleep(2) # Give time to switch to meshcat window
+time.sleep(2)  # Give time to switch to meshcat window
 
 while meshcat.GetButtonClicks("Stop Simulation") < 1:
     print("Time:", simulator.get_context().get_time())
     # x = simulator.get_context().get_continuous_state().get_generalized_position().GetAtIndex(0)
 
     state = simulator.get_context().get_continuous_state().get_vector().CopyToVector()
-    #print(state)
+    # print(state)
     # state_traj.append(state)
     if simulator.get_context().get_time() >= 6:
         break
@@ -204,11 +229,10 @@ plant, scene_graph = AddMultibodyPlantSceneGraph(builder, time_step=0.0)
 Parser(plant).AddModelFromFile("triple_cartpole.urdf")
 plant.Finalize()
 
-visualizer = MeshcatVisualizerCpp.AddToBuilder(builder, scene_graph,
-                                                meshcat)
+visualizer = MeshcatVisualizerCpp.AddToBuilder(builder, scene_graph, meshcat)
 logger = LogVectorOutput(plant.get_state_output_port(), builder)
 meshcat.Delete()
-#meshcat.Set2dRenderMode(xmin=-4, xmax=1, ymin=-1, ymax=1)
+# meshcat.Set2dRenderMode(xmin=-4, xmax=1, ymin=-1, ymax=1)
 
 traj = builder.AddSystem(TrajectorySource(u_trajectory))
 builder.Connect(traj.get_output_port(), plant.get_actuation_input_port())
@@ -221,17 +245,17 @@ plant_context = plant.GetMyContextFromRoot(context)
 ts = np.linspace(u_trajectory.start_time(), u_trajectory.end_time(), 301)
 desired_state = x_trajectory.vector_values(ts)
 
-fig, ax = plt.subplots(figsize=(14,6))
-ax.plot(ts, desired_state[0], label='desired')
-ax.set_xlabel('time')
-ax.set_ylabel('cart position')
+fig, ax = plt.subplots(figsize=(14, 6))
+ax.plot(ts, desired_state[0], label="desired")
+ax.set_xlabel("time")
+ax.set_ylabel("cart position")
 
 context.SetTime(x_trajectory.start_time())
 initial_state = x_trajectory.value(x_trajectory.start_time())
 plant_context.SetContinuousState(initial_state[:])
 
 input("Press Enter to start simulation after 2 seconds")
-time.sleep(2) # Give time to switch to meshcat window
+time.sleep(2)  # Give time to switch to meshcat window
 
 visualizer.StartRecording(False)
 
@@ -241,6 +265,6 @@ visualizer.PublishRecording()
 log = logger.FindLog(context)
 state = log.data()
 
-ax.plot(log.sample_times(), state[0], label=f'actual')
+ax.plot(log.sample_times(), state[0], label=f"actual")
 ax.legend()
 # %%
