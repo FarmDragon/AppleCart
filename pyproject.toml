@@ -23,6 +23,7 @@ altair = "^4.2.0"
 pandas = "^1.4.1"
 pytest-plt = "^1.1.0"
 pytest-xdist = "^2.5.0"
+black = {extras = ["jupyter"], version = "^22.3.0"}
 
 [tool.poetry.dev-dependencies]
 jupyter = "^1.0.0"

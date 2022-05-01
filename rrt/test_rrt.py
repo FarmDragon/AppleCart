@@ -51,16 +51,21 @@ def test_rrt_star(start, goal, bounds, obstacles, plt):
     assert rrt_star.min_cost < 100
     rrt_star.plot()
 
+
 def bound(low, high, value):
     return max(low, min(high, value))
 
+
 def pendulum_extend_function(f, t):
     dt = 0.1
-    u = (t[1] - f[1])/dt + np.sin(f[0])
+    u = (t[1] - f[1]) / dt + np.sin(f[0])
     u_star = bound(-0.3, 0.3, u)
-    new_node = RRT.Node(np.array([f[0] + f[1]*dt, f[1] - np.sin(f[0])*dt + u_star*dt]))
+    new_node = RRT.Node(
+        np.array([f[0] + f[1] * dt, f[1] - np.sin(f[0]) * dt + u_star * dt])
+    )
     new_node.u = u_star
     return new_node
+
 
 def test_rrt_for_simple_pendulum(start, goal, bounds, obstacles, plt):
     """Models a simple pendulum"""
@@ -71,10 +76,11 @@ def test_rrt_for_simple_pendulum(start, goal, bounds, obstacles, plt):
         obstacle_list=[np.array([1, 1, 0.5])],
         max_extend_length=0.2,
         max_iter=1500,
-        extend_function=pendulum_extend_function, 
+        extend_function=pendulum_extend_function,
         plt=plt,
     )
     rrt_star.plot()
+
 
 def test_rg_rrt_for_simple_pendulum(start, goal, bounds, obstacles, plt):
     """Models a simple pendulum"""
@@ -85,10 +91,11 @@ def test_rg_rrt_for_simple_pendulum(start, goal, bounds, obstacles, plt):
         obstacle_list=[np.array([1, 1, 0.5])],
         max_extend_length=0.2,
         max_iter=15000,
-        extend_function=pendulum_extend_function, 
+        extend_function=pendulum_extend_function,
         plt=plt,
     )
     rrt_star.plot()
+
 
 def test_rrt_star_custom_distance_function(start, goal, bounds, obstacles, plt):
     """This should model a car driving through a course - holonomic constraint."""
@@ -96,7 +103,7 @@ def test_rrt_star_custom_distance_function(start, goal, bounds, obstacles, plt):
     start = [*start, 0, 0]
     goal = [*goal, 0, 0]
 
-    # inputs are steering wheel acceleration and acceleration forward or backward. 
+    # inputs are steering wheel acceleration and acceleration forward or backward.
     # The linearization of the system is simple.
 
     rrt_star = RRTStar(
@@ -105,7 +112,7 @@ def test_rrt_star_custom_distance_function(start, goal, bounds, obstacles, plt):
         bounds=bounds,
         obstacle_list=obstacles,
         max_iter=300,
-        distance_function= lambda a, b: np.linalg.norm(a-b), 
+        distance_function=lambda a, b: np.linalg.norm(a - b),
         plt=plt,
     )
     print("Minimum cost: {}".format(rrt_star.min_cost))

@@ -35,8 +35,18 @@ class RRT:
         self.max_iter = max_iter
         self.obstacle_list = obstacle_list
         self.node_list = []
-        self.distance_function = distance_function if distance_function else lambda a,b: np.linalg.norm(a - b)
-        self.extend_function = extend_function if extend_function else lambda f, t: RRT.Node(f+(t-f)*self.max_extend_length/self.distance_function(f,t))
+        self.distance_function = (
+            distance_function
+            if distance_function
+            else lambda a, b: np.linalg.norm(a - b)
+        )
+        self.extend_function = (
+            extend_function
+            if extend_function
+            else lambda f, t: RRT.Node(
+                f + (t - f) * self.max_extend_length / self.distance_function(f, t)
+            )
+        )
         self.plt = plt
         self.path = self.__plan()
 
@@ -96,7 +106,7 @@ class RRT:
             # Select goal point
             rnd = self.Node(self.goal.p)
         return rnd
- 
+
     def get_nearest_node(self, node_list, node):
         """Find the nearest node in node_list to node"""
         dlist = [self.distance_function(node.p, n.p) for n in node_list]
@@ -138,15 +148,19 @@ class RRT:
             node = node.parent
         return path
 
-    # Plotter urns a node into a 2d point to be plotted. 
+    # Plotter urns a node into a 2d point to be plotted.
     def plot(self, plotter=None, bounds=None):
         plotter = plotter if plotter else lambda n: [n.p[0], n.p[1]]
-        bounds = bounds if bounds else [
+        bounds = (
+            bounds
+            if bounds
+            else [
                 self.bounds[0] - 0.5,
                 self.bounds[1] + 0.5,
                 self.bounds[0] - 0.5,
                 self.bounds[1] + 0.5,
             ]
+        )
         plt = self.plt
         plt.figure()
         ax = plt.gca()
