@@ -7,6 +7,8 @@ class RRT:
         def __init__(self, p):
             self.p = np.array(p)
             self.parent = None
+            self.u = None
+            self.reachables = None
 
     def __init__(
         self,
@@ -18,7 +20,9 @@ class RRT:
         path_resolution=0.5,
         goal_sample_rate=0.05,
         max_iter=100,
+        # Takes in two nodes and returns a scalar distance between them.
         distance_function=None,
+        # Takes in a from (f) and to (t) node and returns a new node that is f extended towards t.
         extend_function=None,
         plt=plt,
     ):
@@ -32,7 +36,7 @@ class RRT:
         self.obstacle_list = obstacle_list
         self.node_list = []
         self.distance_function = distance_function if distance_function else lambda a,b: np.linalg.norm(a - b)
-        self.extend_function = extend_function if extend_function else lambda f, t: f+(t-f)*self.max_extend_length/self.distance_function(f,t)
+        self.extend_function = extend_function if extend_function else lambda f, t: RRT.Node(f+(t-f)*self.max_extend_length/self.distance_function(f,t))
         self.plt = plt
         self.path = self.__plan()
 
@@ -73,8 +77,7 @@ class RRT:
         """Connects from_node to a new_node in the direction of to_node
         with maximum distance max_extend_length.
         """
-        new_node = self.Node(to_node.p)
-        new_node.p = self.extend_function(from_node.p, to_node.p)
+        new_node = self.extend_function(from_node.p, to_node.p)
         new_node.parent = from_node
         return new_node
 
@@ -135,16 +138,15 @@ class RRT:
             node = node.parent
         return path
 
-    def draw_graph(self):
-        for node in self.node_list:
-            if node.parent:
-                self.plt.plot(
-                    [node.p[0], node.parent.p[0]], [node.p[1], node.parent.p[1]], "-g"
-                )
-        if self.path:
-            plt.plot([x for (x, y) in self.path], [y for (x, y) in self.path], "-r")
-
-    def plot(self):
+    # Plotter urns a node into a 2d point to be plotted. 
+    def plot(self, plotter=None, bounds=None):
+        plotter = plotter if plotter else lambda n: [n.p[0], n.p[1]]
+        bounds = bounds if bounds else [
+                self.bounds[0] - 0.5,
+                self.bounds[1] + 0.5,
+                self.bounds[0] - 0.5,
+                self.bounds[1] + 0.5,
+            ]
         plt = self.plt
         plt.figure()
         ax = plt.gca()
@@ -153,14 +155,23 @@ class RRT:
             ax.add_artist(circle)
         plt.axis(
             [
-                self.bounds[0] - 0.5,
-                self.bounds[1] + 0.5,
-                self.bounds[0] - 0.5,
-                self.bounds[1] + 0.5,
+                bounds[0],
+                bounds[1],
+                bounds[2],
+                bounds[3],
             ]
         )
-        plt.plot(self.start.p[0], self.start.p[1], "xr", markersize=10)
-        plt.plot(self.goal.p[0], self.goal.p[1], "xb", markersize=10)
+        start = plotter(self.start)
+        goal = plotter(self.goal)
+        plt.plot(start[0], start[1], "xr", markersize=10)
+        plt.plot(goal[0], goal[1], "xb", markersize=10)
         plt.legend(("start", "goal"), loc="upper left")
         plt.gca().set_aspect("equal")
         plt.tight_layout()
+        for node in self.node_list:
+            if node.parent:
+                self.plt.plot(
+                    [node.p[0], node.parent.p[0]], [node.p[1], node.parent.p[1]], "-g"
+                )
+        if self.path:
+            plt.plot([x for (x, y) in self.path], [y for (x, y) in self.path], "-r")
