@@ -2,6 +2,7 @@ import numpy as np
 from value_iteration import *
 from pydrake.examples.pendulum import PendulumPlant
 from pydrake.all import Simulator
+import pandas as pd
 
 
 def test_compute_cost():
@@ -146,3 +147,43 @@ def test_compute_u_star():
     #         [0, 0, 1, 1],
     #     ])
     # )
+
+
+def test_create_sets():
+    num_samples = {"x": 3, "y": 2}
+    ranges = {"x": (1, 3), "y": (10, 20)}
+    target_state = {"x": 1, "y": np.pi}
+
+    state_sets = create_state_sets(num_samples, ranges, target_state)
+
+    assert state_sets == {"x": {1, 2, 3}, "y": {10, 20, np.pi}}
+
+
+def test_create_pandas_grid():
+    num_samples = {"x": 3, "y": 2}
+    ranges = {"x": (1, 3), "y": (10, 20)}
+    target_state = {"x": 1, "y": np.pi}
+
+    pandas_grid = create_pandas_grid(num_samples, ranges, target_state)
+
+    pd.testing.assert_frame_equal(
+        pandas_grid,
+        pd.DataFrame(
+            {
+                "x": [1.0, 1.0, 1.0, 2.0, 2.0, 2.0, 3.0, 3.0, 3.0],
+                "y": [np.pi, 10, 20, np.pi, 10, 20, np.pi, 10, 20],
+            }
+        ),
+    )
+
+
+def test_create_state_space():
+    num_samples = {"x": 3, "y": 2}
+    ranges = {"x": (1, 3), "y": (10, 20)}
+    target_state = {"x": 1, "y": np.pi}
+
+    state_space = create_state_space(num_samples, ranges, target_state)
+
+    np.testing.assert_equal(
+        state_space, {"x": np.array([1, 2, 3]), "y": np.array([np.pi, 10, 20])}
+    )

@@ -294,7 +294,7 @@ def plot_loss(loss_over_time):
     )
 
 
-def plot_J(data, x, y, color="turbo"):
+def plot_cost_to_go(data, x, y, color="turbo"):
     data = data.pivot(y["name"], x["name"], "J")
 
     def fmt(s):
@@ -348,4 +348,26 @@ def visualize_system(system):
                 0
             ].create_svg()
         )
+    )
+
+
+def create_state_space(num_samples, ranges, target_state):
+    return {
+        k: np.unique(
+            np.append(
+                np.linspace(ranges[k][0], ranges[k][1], num_samples[k]), target_state[k]
+            )
+        )
+        for k in num_samples
+    }
+
+
+def create_pandas_grid(num_samples, ranges, target_state):
+    state_space = create_state_space(num_samples, ranges, target_state)
+    grid = np.meshgrid(
+        *state_space.values(),
+        indexing="ij",
+    )
+    return pd.DataFrame(
+        {key: grid[index].flatten() for index, key in enumerate(state_space)}
     )
