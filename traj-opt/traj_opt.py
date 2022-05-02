@@ -56,31 +56,63 @@ from underactuated.meshcat_utils import draw_points, set_planar_viewpoint
 from underactuated.pendulum import PendulumVisualizer
 
 # %%
-# Start Meshcat and load model
+# Start Meshcat and load model and constances
 # Start the visualizer (run this cell only once, each instance consumes a port)
 meshcat = StartMeshcat()
 
 # Triple cart pole model
 TRIPLE_CARTPOLE_URDF = "../triple_cartpole.urdf"
+SIMULATION_TIMESTEP = 0.01
+FLAT_SIMULATION = False
+MESHCAT_2D_LIMITS = {"xmin": -5, "xmax": 3, "ymin": -3.5, "ymax": 3.5}
+MAX_SIMULATION_TIME = 6  # seconds after which to stop meshcat simulation
+
+# %%
+# Define helper functions
+def draw_simulation_env(meshcat, FLAT_SIMULATION):
+    meshcat.SetObject("apple", Sphere(0.1), Rgba(1, 0, 0, 1))
+    meshcat.SetTransform("apple", RigidTransform([0, 0, 3]))
+
+    meshcat.SetObject("branch", Cylinder(0.25, 1), Rgba(0.5, 0.4, 0.3, 1))
+
+    R_GgraspO = RotationMatrix.MakeXRotation(np.pi / 2.0).multiply(
+        RotationMatrix.MakeZRotation(np.pi / 2.0)
+    )
+    meshcat.SetTransform("branch", RigidTransform(R_GgraspO, [1, 0, 2]))
+
+    # Visualize the obstacles
+    meshcat.SetObject("wall1", Box(1, 1, 1), Rgba(0.8, 0.4, 0, 1))
+    meshcat.SetTransform("wall1", RigidTransform([-3, 0, 0]))
+
+    meshcat.SetObject("wall2", Box(1, 1, 1), Rgba(0.8, 0.4, 0, 1))
+    meshcat.SetTransform("wall2", RigidTransform([3, 0, 0]))
+
+    if FLAT_SIMULATION:
+        meshcat.Set2dRenderMode(
+            xmin=MESHCAT_2D_LIMITS["xmin"],
+            xmax=MESHCAT_2D_LIMITS["xmax"],
+            ymin=MESHCAT_2D_LIMITS["ymin"],
+            ymax=MESHCAT_2D_LIMITS["ymax"],
+        )
+
 
 # %%
 # Solve trajectory optimization
 
+# NOTE: These are the original values I tried
 # NUM_BREAKPOINTS = 21
 # MIN_TIMESTEP = 0.1
 # MAX_TIMESTEP = 0.4
+
 # NOTE: One suprising thing is how different the force profiles are when these values are changed even slightly
 # NUM_BREAKPOINTS = 81
 # MIN_TIMESTEP = 0.025
 # MAX_TIMESTEP = 0.1
 
+# NOTE: These parameters take a while, but the input trajectory is smoother
 NUM_BREAKPOINTS = 161
 MIN_TIMESTEP = 0.00175
 MAX_TIMESTEP = 0.025
-
-SIMULATION_TIMESTEP = 0.01
-FLAT_SIMULATION = False
-MAX_SIMULATION_TIME = 6  # seconds after which to stop meshcat simulation
 
 plant = MultibodyPlant(time_step=0.0)
 scene_graph = SceneGraph()
@@ -146,11 +178,11 @@ u_lookup = np.vectorize(u_trajectory.value)
 u_values = u_lookup(times)
 
 ax.plot(times, u_values)
-ax.set_xlabel("time (seconds)")
-ax.set_ylabel("force (Newtons)")
+ax.set_xlabel("Time (s)")
+ax.set_ylabel("Force (N)")
 display(plt.show())
 
-# Animate the results.
+# Save the trajectory
 x_trajectory = dircol.ReconstructStateTrajectory(result)
 
 # %%
@@ -172,7 +204,12 @@ MeshcatVisualizerCpp.AddToBuilder(builder, scene_graph, meshcat)
 meshcat.Delete()
 
 if FLAT_SIMULATION:
-    meshcat.Set2dRenderMode(xmin=-3, xmax=3, ymin=-1.0, ymax=4)
+    meshcat.Set2dRenderMode(
+        xmin=MESHCAT_2D_LIMITS["xmin"],
+        xmax=MESHCAT_2D_LIMITS["xmax"],
+        ymin=MESHCAT_2D_LIMITS["ymin"],
+        ymax=MESHCAT_2D_LIMITS["ymax"],
+    )
 
 diagram = builder.Build()
 
@@ -240,7 +277,6 @@ plant.Finalize()
 visualizer = MeshcatVisualizerCpp.AddToBuilder(builder, scene_graph, meshcat)
 logger = LogVectorOutput(plant.get_state_output_port(), builder)
 meshcat.Delete()
-# meshcat.Set2dRenderMode(xmin=-4, xmax=1, ymin=-1, ymax=1)
 
 traj = builder.AddSystem(TrajectorySource(u_trajectory))
 builder.Connect(traj.get_output_port(), plant.get_actuation_input_port())
@@ -255,12 +291,14 @@ desired_state = x_trajectory.vector_values(ts)
 
 fig, ax = plt.subplots(figsize=(14, 6))
 ax.plot(ts, desired_state[0], label="desired")
-ax.set_xlabel("time")
-ax.set_ylabel("cart position")
+ax.set_xlabel("Time (s)")
+ax.set_ylabel("Cart Position (m)")
 
 context.SetTime(x_trajectory.start_time())
 initial_state = x_trajectory.value(x_trajectory.start_time())
 plant_context.SetContinuousState(initial_state[:])
+
+draw_simulation_env(meshcat, FLAT_SIMULATION)
 
 input("Press Enter to start simulation after 2 seconds")
 time.sleep(2)  # Give time to switch to meshcat window
@@ -285,13 +323,11 @@ builder = DiagramBuilder()
 
 plant, scene_graph = AddMultibodyPlantSceneGraph(builder, time_step=0.0)
 Parser(plant).AddModelFromFile(TRIPLE_CARTPOLE_URDF)
-# plant.DeclareInputPort("input", PortDataType.kVectorValued, 1)
 plant.Finalize()
 
 visualizer = MeshcatVisualizerCpp.AddToBuilder(builder, scene_graph, meshcat)
 logger = LogVectorOutput(plant.get_state_output_port(), builder)
 meshcat.Delete()
-# meshcat.Set2dRenderMode(xmin=-4, xmax=1, ymin=-1, ymax=1)
 
 Q = np.diag([10.0, 10.0, 10.0, 10.0, 1.0, 1.0, 1.0, 1.0])
 # NOTE: Tried reducing R so that there is not a great cost on input
@@ -327,7 +363,7 @@ context = simulator.get_mutable_context()
 plant_context = plant.GetMyContextFromRoot(context)
 
 ts = np.linspace(u_trajectory.start_time(), u_trajectory.end_time(), 301)
-# We plot this later on
+# We plot this after running the simulation
 desired_state = x_trajectory.vector_values(ts)
 
 # %%
@@ -349,6 +385,8 @@ plant_context.SetContinuousState(initial_state[:])
 simulator.Initialize()
 simulator.set_target_realtime_rate(1.0)
 
+draw_simulation_env(meshcat, FLAT_SIMULATION)
+
 # state_traj = []
 input("Press Enter to start simulation after 2 seconds")
 time.sleep(2)  # Give time to switch to meshcat window
@@ -360,7 +398,7 @@ while meshcat.GetButtonClicks("Stop Simulation") < 1:
     state = simulator.get_context().get_continuous_state().get_vector().CopyToVector()
     # print(state)
     # state_traj.append(state)
-    if simulator.get_context().get_time() >= 6:
+    if simulator.get_context().get_time() >= MAX_SIMULATION_TIME:
         break
     # Advance the simulation forward
     simulator.AdvanceTo(simulator.get_context().get_time() + SIMULATION_TIMESTEP)
@@ -373,6 +411,7 @@ meshcat.DeleteAddedControls()
 # Simulation the time varying LQR response
 rng = np.random.default_rng(123)
 
+
 # for i in range(1):
 context.SetTime(x_trajectory.start_time())
 # initial_state = GliderState(x_traj.value(x_traj.start_time()))
@@ -380,6 +419,8 @@ initial_state = x_trajectory.value(x_trajectory.start_time())
 # TODO: Add random noise to initial condition
 # initial_state[0] += 0.04*rng.standard_normal()
 plant_context.SetContinuousState(initial_state[:])
+
+draw_simulation_env(meshcat, FLAT_SIMULATION)
 
 input("Press Enter to start simulation after 2 seconds")
 time.sleep(2)  # Give time to switch to meshcat window
