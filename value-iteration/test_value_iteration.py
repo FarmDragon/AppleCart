@@ -149,29 +149,20 @@ def test_compute_u_star():
     # )
 
 
-def test_create_sets():
-    num_samples = {"x": 3, "y": 2}
-    ranges = {"x": (1, 3), "y": (10, 20)}
-    target_state = {"x": 1, "y": np.pi}
-
-    state_sets = create_state_sets(num_samples, ranges, target_state)
-
-    assert state_sets == {"x": {1, 2, 3}, "y": {10, 20, np.pi}}
-
-
 def test_create_pandas_grid():
-    num_samples = {"x": 3, "y": 2}
-    ranges = {"x": (1, 3), "y": (10, 20)}
-    target_state = {"x": 1, "y": np.pi}
-
-    pandas_grid = create_pandas_grid(num_samples, ranges, target_state)
+    pandas_grid = create_pandas_grid(
+        {
+            "x": [1.0, 2.0],
+            "y": [10.0, 20.0],
+        }
+    )
 
     pd.testing.assert_frame_equal(
         pandas_grid,
         pd.DataFrame(
             {
-                "x": [1.0, 1.0, 1.0, 2.0, 2.0, 2.0, 3.0, 3.0, 3.0],
-                "y": [np.pi, 10, 20, np.pi, 10, 20, np.pi, 10, 20],
+                "x": [1.0, 1.0, 2.0, 2.0],
+                "y": [10.0, 20.0, 10.0, 20.0],
             }
         ),
     )

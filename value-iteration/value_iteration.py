@@ -294,8 +294,8 @@ def plot_loss(loss_over_time):
     )
 
 
-def plot_cost_to_go(data, x, y, color="turbo"):
-    data = data.pivot(y["name"], x["name"], "J")
+def plot_surface(data, x, y, z, color="turbo"):
+    data = data.pivot(y["name"], x["name"], z)
 
     def fmt(s):
         try:
@@ -362,12 +362,8 @@ def create_state_space(num_samples, ranges, target_state):
     }
 
 
-def create_pandas_grid(num_samples, ranges, target_state):
-    state_space = create_state_space(num_samples, ranges, target_state)
-    grid = np.meshgrid(
-        *state_space.values(),
-        indexing="ij",
-    )
+def create_pandas_grid(state_space):
+    grid = np.meshgrid(*state_space.values(), indexing="ij")
     return pd.DataFrame(
         {key: grid[index].flatten() for index, key in enumerate(state_space)}
     )
