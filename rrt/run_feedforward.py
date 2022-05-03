@@ -12,12 +12,13 @@ from pydrake.all import (
     FittedValueIteration,
     DynamicProgrammingOptions,
     SceneGraph,
-    PeriodicBoundaryCondition,
     LogVectorOutput,
     WrapToSystem,
     LinearQuadraticRegulator,
     PiecewisePolynomial,
     TrajectorySource,
+    FiniteHorizonLinearQuadraticRegulatorOptions,
+    MakeFiniteHorizonLinearQuadraticRegulator,
 )
 from IPython.display import HTML, display
 from IPython.display import display, clear_output, SVG, display
@@ -346,6 +347,7 @@ def visualize_system(system):
 
 def run_trajectory(
     inputs,
+    states,
     sim_time=4,
     starting_state={
         "x": 0,
@@ -357,6 +359,7 @@ def run_trajectory(
         "theta_dot_2": 0,
         "theta_dot_3": 0,
     },
+    use_lqr=False,
 ):
     builder = DiagramBuilder()
 
@@ -364,15 +367,43 @@ def run_trajectory(
     plant, scene_graph = AddMultibodyPlantSceneGraph(builder, time_step=0.0)
     Parser(plant).AddModelFromFile("../triple_cartpole.urdf")
     plant.Finalize()
-    plant.CreateDefaultContext()
+    plant_context = plant.CreateDefaultContext()
     plant.set_name("cartpole")
 
     # Add the controller
     times = np.linspace(0, sim_time, num=len(inputs))
     input_polynomial = PiecewisePolynomial.ZeroOrderHold(times, inputs.reshape(-1, 1).T)
-    controller = builder.AddSystem(TrajectorySource(input_polynomial))
-    controller.set_name("controller")
-    builder.Connect(controller.get_output_port(), plant.get_actuation_input_port())
+
+    if use_lqr:
+        Q = np.diag([10.0, 10.0, 10.0, 10.0, 1.0, 1.0, 1.0, 1.0])
+        R = 0.001 * np.eye(1)
+        options = FiniteHorizonLinearQuadraticRegulatorOptions()
+        options.Qf = np.diag([1000.0, 1000.0, 1000.0, 1000.0, 1.0, 1.0, 1.0, 1.0])
+        state_polynomial = PiecewisePolynomial.ZeroOrderHold(
+            times, states.reshape(-1, 1).T
+        )
+        options.x0 = state_polynomial
+        options.u0 = input_polynomial
+        options.input_port_index = plant.get_actuation_input_port().get_index()
+
+        controller = builder.AddSystem(
+            MakeFiniteHorizonLinearQuadraticRegulator(
+                system=plant,
+                context=plant_context,
+                t0=state_polynomial.start_time(),
+                tf=state_polynomial.end_time(),
+                Q=Q,
+                R=R,
+                options=options,
+            )
+        )
+        controller.set_name("feedback controller")
+        builder.Connect(controller.get_output_port(), plant.get_actuation_input_port())
+        builder.Connect(plant.get_state_output_port(), controller.get_input_port())
+    else:
+        controller = builder.AddSystem(TrajectorySource(input_polynomial))
+        controller.set_name("feed-forward controller")
+        builder.Connect(controller.get_output_port(), plant.get_actuation_input_port())
 
     # Add visualizer
     visualizer = builder.AddSystem(
@@ -431,7 +462,7 @@ def run_trajectory(
 
 
 # %%
-df = run_trajectory(trajectory_inputs)
+df = run_trajectory(trajectory_inputs, use_lqr=True)
 
 # %%
 base_chart = alt.Chart(df).encode(
