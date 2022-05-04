@@ -12,6 +12,7 @@
         "Jnext",
         "jshtml",
         "optim",
+        "pydot",
         "randn",
         "Rinv",
         "urdf",
