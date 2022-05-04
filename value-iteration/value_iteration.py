@@ -262,16 +262,30 @@ class ContinuousFittedValueIterationPolicy(LeafSystem):
             output.SetAtIndex(i, u_star[i])
 
 
-def simulate_and_animate(starting_state, visualizer, simulator, sim_time=5):
+def simulate_and_animate(
+    starting_state,
+    visualizer,
+    simulator,
+    state_logger=None,
+    input_logger=None,
+    sim_time=5,
+):
     """
-    Simulates the system and produce a video
+    Simulate the system and produce a video
+
+    Return a dataframe containing the state and input over time
     """
 
     visualizer.start_recording()
 
     context = simulator.get_mutable_context()
     context.SetTime(0.0)
-    context.SetContinuousState(starting_state)
+    context.SetContinuousState(np.array(list(starting_state.values())))
+
+    if state_logger is not None and input_logger is not None:
+        state_logger.FindMutableLog(context).Clear()
+        input_logger.FindMutableLog(context).Clear()
+
     simulator.Initialize()
     simulator.AdvanceTo(sim_time)
 
@@ -280,6 +294,17 @@ def simulate_and_animate(starting_state, visualizer, simulator, sim_time=5):
     ani = visualizer.get_recording_as_animation()
     display(HTML(ani.to_jshtml()))
     visualizer.reset_recording()
+
+    if state_logger is not None and input_logger is not None:
+        state_log = state_logger.FindLog(simulator.get_context())
+        input_log = input_logger.FindLog(simulator.get_context())
+
+        state_names = list(starting_state.keys())
+        df = pd.DataFrame(state_log.data().T, columns=state_names)
+        df["time"] = state_log.sample_times()
+        df["u"] = input_log.data().T
+
+        return df
 
 
 def plot_loss(loss_over_time):
