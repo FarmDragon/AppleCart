@@ -2,6 +2,7 @@ import numpy as np
 from value_iteration import *
 from pydrake.examples.pendulum import PendulumPlant
 from pydrake.all import Simulator
+import pandas as pd
 
 
 def test_compute_cost():
@@ -127,7 +128,7 @@ def test_compute_u_star():
         dstate_dynamics_du.shape, (num_states, num_inputs, num_samples)
     )
     answer = np.einsum("uu,xut->uxt", R_inverse, dstate_dynamics_du)
-    # todo: what would I expect this to look like? create an assert
+    # TODO: what would I expect this to look like? create an assert
     # sort of like this, but not quite?
     # np.array([
     #         [[.1, .2, .3, .4], [1, 2, 3, 4]],
@@ -138,7 +139,7 @@ def test_compute_u_star():
     answer = np.einsum("uu,xut,xt->ut", R_inverse, dstate_dynamics_du, dJdX)
     np.testing.assert_equal(answer.shape, (num_inputs, num_samples))
     print(answer)
-    # todo: test the expected output array
+    # TODO: test the expected output array
     # np.testing.assert_equal(
     #     answer,
     #     np.array([
@@ -146,3 +147,34 @@ def test_compute_u_star():
     #         [0, 0, 1, 1],
     #     ])
     # )
+
+
+def test_create_pandas_grid():
+    pandas_grid = create_pandas_grid(
+        {
+            "x": [1.0, 2.0],
+            "y": [10.0, 20.0],
+        }
+    )
+
+    pd.testing.assert_frame_equal(
+        pandas_grid,
+        pd.DataFrame(
+            {
+                "x": [1.0, 1.0, 2.0, 2.0],
+                "y": [10.0, 20.0, 10.0, 20.0],
+            }
+        ),
+    )
+
+
+def test_create_state_space():
+    num_samples = {"x": 3, "y": 2}
+    ranges = {"x": (1, 3), "y": (10, 20)}
+    target_state = {"x": 1, "y": np.pi}
+
+    state_space = create_state_space(num_samples, ranges, target_state)
+
+    np.testing.assert_equal(
+        state_space, {"x": np.array([1, 2, 3]), "y": np.array([np.pi, 10, 20])}
+    )
