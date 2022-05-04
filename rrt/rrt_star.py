@@ -4,36 +4,13 @@ import numpy as np
 
 class RRTStar(RRT):
     class Node(RRT.Node):
-        def __init__(self, p):
-            super().__init__(p)
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
             self.cost = 0.0
 
-    def __init__(
-        self,
-        start,
-        goal,
-        obstacle_list,
-        bounds,
-        max_extend_length=5.0,
-        path_resolution=0.5,
-        goal_sample_rate=0.0,
-        max_iter=200,
-        connect_circle_dist=50.0,
-        **kwargs
-    ):
-        super().__init__(
-            start,
-            goal,
-            obstacle_list,
-            bounds,
-            max_extend_length,
-            path_resolution,
-            goal_sample_rate,
-            max_iter,
-            **kwargs
-        )
+    def __init__(self, connect_circle_dist=50.0, **kwargs):
+        super().__init__(**kwargs)
         self.connect_circle_dist = connect_circle_dist
-        self.goal = self.Node(goal)
         self.path, self.min_cost = self.__plan()
 
     def __plan(self):
@@ -43,11 +20,11 @@ class RRTStar(RRT):
             # Create a random node inside the bounded environment
             rnd = self.get_random_node()
             # Find nearest node
-            nearest_node = self.get_nearest_node(self.node_list, rnd)
+            nearest_node = self.get_nearest_node(rnd)
             # Get new node by connecting rnd_node and nearest_node
             new_node = self.steer(nearest_node, rnd, self.max_extend_length)
             # If path between new_node and nearest node is not in collision:
-            if not self.collision(new_node, nearest_node, self.obstacle_list):
+            if not self.collision(new_node, nearest_node):
                 near_inds = self.near_nodes_inds(new_node)
                 # Connect the new node to the best parent in near_inds
                 new_node = self.choose_parent(new_node, near_inds)
@@ -72,7 +49,7 @@ class RRTStar(RRT):
         #    the cost of the new_node to the minimum cost.
         near_nodes = self.near_nodes_inds(new_node)
         for near_node in [self.node_list[i] for i in near_nodes]:
-            if not self.collision(near_node, new_node, self.obstacle_list):
+            if not self.collision(near_node, new_node):
                 new_cost = self.new_cost(near_node, new_node)
                 if new_cost < min_cost:
                     best_near_node = near_node
@@ -91,7 +68,10 @@ class RRTStar(RRT):
         # B) reduce their own cost.
         # If A and B are true, update the cost and parent properties of the node.
         for near_node in [self.node_list[i] for i in near_inds]:
-            if not self.collision(near_node, new_node, self.obstacle_list):
+            if not self.collision(
+                near_node,
+                new_node,
+            ):
                 new_cost = self.new_cost(new_node, near_node)
                 if new_cost < near_node.cost:
                     near_node.cost = new_cost
@@ -109,7 +89,7 @@ class RRTStar(RRT):
             # Has to be in close proximity to the goal
             if self.dist_to_goal(node.p) <= self.max_extend_length:
                 # Connection between node and goal needs to be collision free
-                if not self.collision(self.goal, node, self.obstacle_list):
+                if not self.collision(self.goal, node):
                     # The final path length
                     cost = node.cost + self.dist_to_goal(node.p)
                     if node.cost + self.dist_to_goal(node.p) < min_cost:
@@ -128,12 +108,17 @@ class RRTStar(RRT):
 
     def new_cost(self, from_node, to_node):
         """to_node's new cost if from_node were the parent"""
-        d = np.linalg.norm(from_node.p - to_node.p)
-        return from_node.cost + d
+        return from_node.cost + self.dynamics.cost(from_node.p, to_node.p)
 
     def propagate_cost_to_leaves(self, parent_node):
         """Recursively update the cost of the nodes"""
-        for node in self.node_list:
-            if node.parent == parent_node:
-                node.cost = self.new_cost(parent_node, node)
-                self.propagate_cost_to_leaves(node)
+        parents = set()
+        parents.add(parent_node)
+        while len(parents) > 0:
+            new_parents = set()
+            for node in self.node_list:
+                for potential_parent in parents:
+                    if node.parent == potential_parent:
+                        node.cost = self.new_cost(potential_parent, node)
+                        new_parents.add(node)
+            parents = new_parents

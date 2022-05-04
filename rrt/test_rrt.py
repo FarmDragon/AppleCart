@@ -6,12 +6,12 @@ import pytest
 
 @pytest.fixture
 def start():
-    return np.array([11, 0])  # Start location
+    return np.array([0, 0])  # Start location
 
 
 @pytest.fixture
 def goal():
-    return np.array([6, 8])  # Goal location
+    return np.array([2, 2])  # Goal location
 
 
 @pytest.fixture
@@ -28,12 +28,18 @@ def obstacles():
 
 @pytest.fixture
 def bounds():
-    return np.array([-2, 15])  # Bounds in both x and y
+    return np.array([-4, 4])  # Bounds in both x and y
 
 
 def test_run_rrt(start, goal, bounds, obstacles, plt):
     np.random.seed(7)
-    rrt = RRT(start=start, goal=goal, bounds=bounds, obstacle_list=obstacles)
+    rrt = RRT(
+        start=start,
+        goal=goal,
+        bounds=bounds,
+        obstacle_list=obstacles,
+        plt=plt,
+    )
     rrt.plot()
 
 
@@ -56,47 +62,78 @@ def bound(low, high, value):
     return max(low, min(high, value))
 
 
-def pendulum_extend_function(f, t):
-    dt = 0.1
-    u = (t[1] - f[1]) / dt + np.sin(f[0])
-    u_star = bound(-0.3, 0.3, u)
-    new_node = RRT.Node(
-        np.array([f[0] + f[1] * dt, f[1] - np.sin(f[0]) * dt + u_star * dt])
-    )
-    new_node.u = u_star
-    return new_node
+class Pendulum(RRT.Dynamics):
+    def __init__(self) -> None:
+        self.dt = 0.1
+
+    def calculate_u(self, f, t):
+        u = (t[1] - f[1]) / self.dt + np.sin(f[0])
+        return u
+
+    def run_forward(self, f, t):
+        u = (t[1] - f[1]) / self.dt + np.sin(f[0])
+        u_star = bound(-0.3, 0.3, u)
+        new_node = RRT.Node(
+            np.array(
+                [
+                    f[0] + f[1] * self.dt,
+                    f[1] - np.sin(f[0]) * self.dt + u_star * self.dt,
+                ]
+            )
+        )
+        new_node.u = u_star
+        return new_node
+
+    def cost(self, f, t):
+        return self.calculate_u(f, t)
 
 
-def test_rrt_for_simple_pendulum(start, goal, bounds, obstacles, plt):
+def test_rrt_for_simple_pendulum(start, goal, bounds, plt):
     """Models a simple pendulum"""
-    rrt_star = RRT(
-        start=np.array([0, 0]),
-        goal=np.array([3, 2]),
-        bounds=np.array([-4, 4]),
-        obstacle_list=[np.array([1, 1, 0.5])],
-        max_extend_length=0.2,
-        max_iter=1500,
-        extend_function=pendulum_extend_function,
+    rrt = RRT(
+        start=start,
+        goal=goal,
+        bounds=bounds,
+        max_extend_length=0.1,
+        max_iter=3000,
+        dynamics=Pendulum(),
         plt=plt,
     )
-    rrt_star.plot()
+    rrt.plot()
 
 
+@pytest.mark.skip(reason="no way of currently testing this")
 def test_rg_rrt_for_simple_pendulum(start, goal, bounds, obstacles, plt):
     """Models a simple pendulum"""
     rrt_star = RRT(
-        start=np.array([0, 0]),
-        goal=np.array([3, 2]),
-        bounds=np.array([-4, 4]),
-        obstacle_list=[np.array([1, 1, 0.5])],
+        start=start,
+        goal=goal,
+        bounds=bounds,
+        obstacle_list=obstacles,
         max_extend_length=0.2,
-        max_iter=15000,
-        extend_function=pendulum_extend_function,
+        max_iter=3000,
+        dynamics=Pendulum(),
         plt=plt,
     )
     rrt_star.plot()
 
 
+@pytest.mark.skip(reason="no way of currently testing this")
+def test_rrt_star_simple_pendulum(start, goal, bounds, plt):
+    """Models a simple pendulum"""
+    rrt_star = RRTStar(
+        start=start,
+        goal=goal,
+        bounds=bounds,
+        max_extend_length=0.2,
+        max_iter=10,
+        dynamics=Pendulum(),
+        plt=plt,
+    )
+    rrt_star.plot()
+
+
+@pytest.mark.skip(reason="no way of currently testing this")
 def test_rrt_star_custom_distance_function(start, goal, bounds, obstacles, plt):
     """This should model a car driving through a course - holonomic constraint."""
     # Add steering angle and velocity (both 0)
@@ -111,7 +148,7 @@ def test_rrt_star_custom_distance_function(start, goal, bounds, obstacles, plt):
         goal=goal,
         bounds=bounds,
         obstacle_list=obstacles,
-        max_iter=300,
+        max_iter=10,
         distance_function=lambda a, b: np.linalg.norm(a - b),
         plt=plt,
     )

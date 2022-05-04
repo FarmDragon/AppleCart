@@ -3,9 +3,23 @@ import matplotlib.pyplot as plt
 
 
 class RRT:
+    class Dynamics:
+        def __init__(self, max_extend_length) -> None:
+            self.max_extend_length = max_extend_length
+
+        def run_forward(self, f, t):
+            return RRT.Node(f + (t - f) * self.max_extend_length / self.distance(f, t))
+
+        def cost(self, f, t):
+            return self.distance(t, f)
+
+        def distance(self, f, t):
+            return np.linalg.norm(t - f)
+
     class Node:
         def __init__(self, p):
             self.p = np.array(p)
+            self.p.astype(np.float64, copy=False)
             self.parent = None
             self.u = None
             self.reachables = None
@@ -14,16 +28,13 @@ class RRT:
         self,
         start,
         goal,
-        obstacle_list,
         bounds,
-        max_extend_length=3.0,
+        obstacle_list=[],
+        max_extend_length=0.5,
         path_resolution=0.5,
         goal_sample_rate=0.05,
         max_iter=100,
-        # Takes in two nodes and returns a scalar distance between them.
-        distance_function=None,
-        # Takes in a from (f) and to (t) node and returns a new node that is f extended towards t.
-        extend_function=None,
+        dynamics=None,
         plt=plt,
     ):
         self.start = self.Node(start)
@@ -35,19 +46,8 @@ class RRT:
         self.max_iter = max_iter
         self.obstacle_list = obstacle_list
         self.node_list = []
-        self.distance_function = (
-            distance_function
-            if distance_function
-            else lambda a, b: np.linalg.norm(a - b)
-        )
-        self.extend_function = (
-            extend_function
-            if extend_function
-            else lambda f, t: RRT.Node(
-                f + (t - f) * self.max_extend_length / self.distance_function(f, t)
-            )
-        )
         self.plt = plt
+        self.dynamics = dynamics if dynamics else RRT.Dynamics(max_extend_length)
         self.path = self.__plan()
 
     def __plan(self):
@@ -63,11 +63,11 @@ class RRT:
             # 4) If the path between new_node and the
             # nearest node is not in collision, add it to the node_list
             rnd_node = self.get_random_node()
-            nearest = self.get_nearest_node(self.node_list, rnd_node)
+            nearest = self.get_nearest_node(rnd_node)
             new_node = self.steer(
                 nearest, rnd_node, max_extend_length=self.max_extend_length
             )
-            if not self.collision(new_node, nearest, self.obstacle_list):
+            if not self.collision(new_node, nearest):
                 self.node_list.append(new_node)
 
             # Don't need to modify beyond here
@@ -77,9 +77,7 @@ class RRT:
                 final_node = self.steer(
                     self.node_list[-1], self.goal, self.max_extend_length
                 )
-                if not self.collision(
-                    final_node, self.node_list[-1], self.obstacle_list
-                ):
+                if not self.collision(final_node, self.node_list[-1]):
                     return self.final_path(len(self.node_list) - 1)
         return None  # cannot find path
 
@@ -87,13 +85,13 @@ class RRT:
         """Connects from_node to a new_node in the direction of to_node
         with maximum distance max_extend_length.
         """
-        new_node = self.extend_function(from_node.p, to_node.p)
+        new_node = self.dynamics.run_forward(from_node.p, to_node.p)
         new_node.parent = from_node
         return new_node
 
     def dist_to_goal(self, p):
         """Distance from p to goal"""
-        return self.distance_function(p, self.goal.p)
+        return self.dynamics.distance(p, self.goal.p)
 
     def get_random_node(self):
         """Sample random node inside bounds or sample goal point"""
@@ -107,20 +105,19 @@ class RRT:
             rnd = self.Node(self.goal.p)
         return rnd
 
-    def get_nearest_node(self, node_list, node):
+    def get_nearest_node(self, node):
         """Find the nearest node in node_list to node"""
-        dlist = [self.distance_function(node.p, n.p) for n in node_list]
+        dlist = [self.dynamics.distance(node.p, n.p) for n in self.node_list]
         minind = dlist.index(min(dlist))
-        return node_list[minind]
+        return self.node_list[minind]
 
-    @staticmethod
-    def collision(node1, node2, obstacle_list):
+    def collision(self, node1, node2):
         """Check whether the path connecting node1 and node2
         is in collision with anyting from the obstacle_list
         """
         p1 = node2.p
         p2 = node1.p
-        for o in obstacle_list:
+        for o in self.obstacle_list:
             center_circle = o[0:2]
             radius = o[2]
             d12 = p2 - p1  # the directional vector from p1 to p2
@@ -138,13 +135,16 @@ class RRT:
         return False  # is not in collision
 
     def final_path(self, goal_ind):
+        return [n.p for n in self.node_path(goal_ind)]
+
+    def node_path(self, goal_state):
         """Compute the final path from the goal node to the start node"""
-        path = [self.goal.p]
-        node = self.node_list[goal_ind]
+        path = [self.goal]
+        node = self.get_nearest_node(RRT.Node(goal_state))
         # modify here: Generate the final path from the goal node to the start node.
         # We will check that path[0] == goal and path[-1] == start
         while node:
-            path.append(node.p)
+            path.append(node)
             node = node.parent
         return path
 
