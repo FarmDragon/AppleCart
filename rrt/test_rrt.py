@@ -111,11 +111,15 @@ def bound(low, high, value):
 
 
 class Pendulum(RRT.Dynamics):
-    def __init__(self, dt=0.1) -> None:
+    def __init__(self, dt=0.1, m=1, g=9.8, l=0.5, b=0.1) -> None:
         self.dt = dt
 
     def calculate_u(self, f, t):
-        u = (t[1] - f[1]) / self.dt + np.sin(f[0])
+        u = (
+            (t[1] - f[1]) / self.dt
+            + np.sin(f[0]) * self.m * self.g / self.l
+            + self.b * f[0]
+        )
         return u
 
     def run_forward(self, f, t):
