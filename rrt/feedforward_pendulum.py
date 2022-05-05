@@ -53,6 +53,7 @@ def run_trajectory(
     params.set_mass(1)
     params.set_damping(0)
     params.set_length(1)
+    params.set_gravity(0)
     scene_graph = builder.AddSystem(SceneGraph())
     PendulumGeometry.AddToBuilder(builder, plant.get_state_output_port(), scene_graph)
 
@@ -96,7 +97,7 @@ def run_trajectory(
 
     # Add visualizer
     visualizer = builder.AddSystem(
-        PlanarSceneGraphVisualizer(scene_graph, xlim=[-3, 3], ylim=[-3, 3], show=False)
+        PlanarSceneGraphVisualizer(scene_graph, xlim=[-1, 1], ylim=[-1, 1], show=False)
     )
     visualizer.set_name("visualizer")
     builder.Connect(scene_graph.get_query_output_port(), visualizer.get_input_port(0))
@@ -149,9 +150,116 @@ def run_trajectory(
 
 
 # %%
-df = run_trajectory(
-    inputs=np.load("inputs.npy"), sim_time=0.1 * len(np.load("inputs.npy"))
+
+inputs = np.array(
+    [
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        -0.3,
+        0.3,
+        0.3,
+        -0.3,
+        -0.3,
+        0.3,
+        0.3,
+        -0.3,
+        0.3,
+        -0.2924273695736902,
+        -0.3,
+        -0.3,
+        -0.3,
+        -0.3,
+        -0.3,
+        -0.3,
+        -0.3,
+        -0.3,
+        -0.3,
+        -0.3,
+        -0.3,
+        -0.3,
+        -0.3,
+        -0.3,
+        -0.3,
+        -0.3,
+        -0.3,
+        -0.3,
+        -0.3,
+        -0.3,
+        0.3,
+        -0.3,
+        -0.3,
+        -0.3,
+        -0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+        0.3,
+    ]
 )
+
+df = run_trajectory(inputs=inputs, sim_time=0.1 * len(inputs))
 
 # %%
 base_chart = alt.Chart(df).encode(
