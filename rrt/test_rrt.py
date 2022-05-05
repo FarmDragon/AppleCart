@@ -43,6 +43,53 @@ def test_run_rrt(start, goal, bounds, obstacles, plt):
     rrt.plot()
 
 
+def test_run_rrt_from_notebook(plt):
+    np.random.seed(7)
+    rrt = RRT(
+        start=np.array([11, 0]),
+        goal=np.array([6, 8]),
+        bounds=np.array([-2, 15]),
+        obstacle_list=[  # circles parametrized by [x, y, radius]
+            np.array([9, 6, 2]),
+            np.array([9, 8, 1]),
+            np.array([9, 10, 2]),
+            np.array([4, 5, 2]),
+            np.array([7, 5, 2]),
+            np.array([4, 10, 1]),
+        ],
+        max_extend_length=3.0,
+        path_resolution=0.5,
+        goal_sample_rate=0.05,
+        max_iter=100,
+        plt=plt,
+    )
+    rrt.plot()
+
+
+def test_run_rrt_star_from_notebook(plt):
+    np.random.seed(7)
+    rrt = RRTStar(
+        start=np.array([11, 0]),
+        goal=np.array([6, 8]),
+        bounds=np.array([-2, 15]),
+        obstacle_list=[  # circles parametrized by [x, y, radius]
+            np.array([9, 6, 2]),
+            np.array([9, 8, 1]),
+            np.array([9, 10, 2]),
+            np.array([4, 5, 2]),
+            np.array([7, 5, 2]),
+            np.array([4, 10, 1]),
+        ],
+        max_extend_length=5.0,
+        path_resolution=0.5,
+        goal_sample_rate=0.0,
+        max_iter=5000,
+        connect_circle_dist=50.0,
+        plt=plt,
+    )
+    rrt.plot()
+
+
 def test_rrt_star(start, goal, bounds, obstacles, plt):
     np.random.seed(7)
     rrt_star = RRTStar(
@@ -100,6 +147,7 @@ def test_rrt_for_simple_pendulum(start, goal, bounds, plt):
         plt=plt,
     )
     rrt.plot()
+    rrt.save()
 
 
 @pytest.mark.skip(reason="no way of currently testing this")

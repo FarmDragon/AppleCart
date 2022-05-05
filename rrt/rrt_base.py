@@ -1,3 +1,4 @@
+from pathlib import Path
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -78,7 +79,7 @@ class RRT:
                     self.node_list[-1], self.goal, self.max_extend_length
                 )
                 if not self.collision(final_node, self.node_list[-1]):
-                    return self.final_path(len(self.node_list) - 1)
+                    return self.final_path(self.goal)
         return None  # cannot find path
 
     def steer(self, from_node, to_node, max_extend_length=np.inf):
@@ -134,8 +135,8 @@ class RRT:
                 return True  # is in collision
         return False  # is not in collision
 
-    def final_path(self, goal_ind):
-        return [n.p for n in self.node_path(goal_ind)]
+    def final_path(self, goal):
+        return [n.p for n in self.node_path(goal.p)]
 
     def node_path(self, goal_state):
         """Compute the final path from the goal node to the start node"""
@@ -189,3 +190,12 @@ class RRT:
                 )
         if self.path:
             plt.plot([x for (x, y) in self.path], [y for (x, y) in self.path], "-r")
+
+    def save(self, path=Path.cwd() / "rrt_path"):
+        np.save(
+            path / "states.npy",
+            np.array([(n.p[0], n.p[1]) for n in self.node_path(self.goal.p)]),
+        )
+        np.save(
+            path / "inputs.npy", np.array([n.u for n in self.node_path(self.goal.p)])
+        )

@@ -33,7 +33,7 @@ class RRTStar(RRT):
                 self.rewire(new_node, near_inds)
         last_index, min_cost = self.best_goal_node_index()
         if last_index:
-            return self.final_path(last_index), min_cost
+            return self.final_path(self.goal), min_cost
         return None, min_cost
 
     def choose_parent(self, new_node, near_inds):
