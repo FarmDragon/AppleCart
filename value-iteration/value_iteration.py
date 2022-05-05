@@ -35,7 +35,7 @@ def compute_state_cost(Q, target_state, data):
 
     Q is of size (num_states x num_states)
     target_state is of size (num_states x 1)
-    state is of size (num_states x num_samples)
+    data is of size (num_states x num_samples)
     return is of size (num_samples,)
     """
     if len(data.shape) != 2:
@@ -64,14 +64,14 @@ def ContinuousFittedValueIteration(
     compute_u_star,
     R_diag,
     state_samples,
+    target_state,
     time_step=0.01,
-    discount_factor=1.0,
+    discount_factor=0.999,
     lr=0.001,
-    minibatch=None,
-    epochs=1000,
-    optimization_steps_per_epoch=25,
+    minibatch=32,
+    epochs=300,
+    optimization_steps_per_epoch=100,
     input_limits=None,
-    target_state=None,
 ):
     if "get_actuation_input_port" in dir(plant):
         input_port = plant.get_actuation_input_port()
@@ -92,6 +92,7 @@ def ContinuousFittedValueIteration(
     assert state_samples.shape[0] == num_states
     assert time_step > 0.0
     assert discount_factor > 0.0 and discount_factor <= 1.0
+    assert minibatch > 0
     if input_limits is not None:
         assert (
             num_inputs == 1
@@ -125,12 +126,10 @@ def ContinuousFittedValueIteration(
 
     optimizer = Adam(value_mlp.GetMutableParameters(mlp_context), lr=lr)
 
-    if minibatch and target_state is not None:
+    if target_state is not None:
         M = minibatch + 1
-    elif minibatch:
-        M = minibatch
     else:
-        M = N
+        M = minibatch
 
     J = np.zeros((1, M))
     Jnext = np.zeros((1, M))
@@ -140,13 +139,10 @@ def ContinuousFittedValueIteration(
 
     last_loss = np.inf
     for epoch in range(epochs):
-        if minibatch:
-            batch = np.random.randint(0, N, minibatch)
-            # always include the target state in the batch
-            if target_state is not None:
-                batch = np.append(batch, -1)
-        else:
-            batch = range(N)
+        batch = np.random.randint(0, N, minibatch)
+        # always include the target state in the batch
+        if target_state is not None:
+            batch = np.append(batch, -1)
 
         # Compute dJdX
         value_mlp.BatchOutput(mlp_context, state_samples[:, batch], J, dJdX)
@@ -184,8 +180,6 @@ def ContinuousFittedValueIteration(
             )
             loss_over_time.append(loss)
             optimizer.step(loss, dloss_dparams)
-        if not minibatch and np.linalg.norm(last_loss - loss) < 1e-8:
-            break
         last_loss = loss
         clear_output(wait=True)
         display("loss: {:.6} epoch: {:}/{:}".format(last_loss, epoch, epochs))
