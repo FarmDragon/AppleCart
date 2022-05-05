@@ -46,14 +46,17 @@ def run_trajectory(
     builder = DiagramBuilder()
 
     # Create the pendulum
-    plant = builder.AddSystem(PendulumPlant())
-    plant.set_name("pendulum")
+    pendulum = PendulumPlant()
+
+    plant = builder.AddSystem(pendulum)
     plant_context = plant.CreateDefaultContext()
     params = plant.get_mutable_parameters(plant_context)
     params.set_mass(1)
     params.set_damping(0)
     params.set_length(1)
     params.set_gravity(0)
+    plant.set_name("pendulum")
+
     scene_graph = builder.AddSystem(SceneGraph())
     PendulumGeometry.AddToBuilder(builder, plant.get_state_output_port(), scene_graph)
 
@@ -269,7 +272,7 @@ input_chart = base_chart.mark_line(color="orange").encode(
     alt.Y("u:Q", title="Torque (Nm)", axis=alt.Axis(titleColor="orange")),
 )
 theta_1_chart = base_chart.mark_line().encode(
-    alt.Y("theta_1:Q", title="Theta (rad)"),
+    alt.Y("theta:Q", title="Theta (rad)"),
 )
 
 alt.layer(input_chart, theta_1_chart).resolve_scale(y="independent")
