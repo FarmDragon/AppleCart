@@ -22,10 +22,13 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 from matplotlib import pyplot as plt
+import matplotlib
 from IPython.display import display, clear_output, SVG, HTML
 
 # %%
 def simulate_triple_cartpole(sim_time=10):
+    # make visualization larger
+    matplotlib.rcParams["figure.figsize"] = (10, 10)
 
     # start construction site of our block diagram
     builder = DiagramBuilder()
@@ -90,6 +93,7 @@ def simulate_triple_cartpole(sim_time=10):
     # show visualization
     visualizer.stop_recording()
     ani = visualizer.get_recording_as_animation()
+    ani.save("lqr.mp4", fps=60)
     display(HTML(ani.to_jshtml()))
     visualizer.reset_recording()
 
