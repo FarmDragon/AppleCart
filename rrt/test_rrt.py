@@ -1,3 +1,4 @@
+from pathlib import Path
 from rrt_base import RRT
 from rrt_star import RRTStar
 import numpy as np
@@ -110,8 +111,8 @@ def bound(low, high, value):
 
 
 class Pendulum(RRT.Dynamics):
-    def __init__(self) -> None:
-        self.dt = 0.1
+    def __init__(self, dt=0.1) -> None:
+        self.dt = dt
 
     def calculate_u(self, f, t):
         u = (t[1] - f[1]) / self.dt + np.sin(f[0])
@@ -135,14 +136,14 @@ class Pendulum(RRT.Dynamics):
         return self.calculate_u(f, t)
 
 
-def test_rrt_for_simple_pendulum(start, goal, bounds, plt):
+def test_rrt_for_simple_pendulum_balance(start, goal, bounds, plt):
     """Models a simple pendulum"""
     rrt = RRT(
-        start=start,
-        goal=goal,
+        start=np.array([0, 0]),
+        goal=np.array([np.pi, 0]),
         bounds=bounds,
         max_extend_length=0.1,
-        max_iter=3000,
+        max_iter=10000,
         dynamics=Pendulum(),
         plt=plt,
     )
@@ -203,3 +204,16 @@ def test_rrt_star_custom_distance_function(start, goal, bounds, obstacles, plt):
     print("Minimum cost: {}".format(rrt_star.min_cost))
     assert rrt_star.min_cost < 100
     rrt_star.plot()
+
+
+def test_load_file():
+    inputs_path = Path.cwd() / "rrt_path" / "inputs.npy"
+    state_path = Path.cwd() / "rrt_path" / "states.npy"
+    inputs = np.load(inputs_path, allow_pickle=True)
+    states = np.load(state_path, allow_pickle=True)
+    import json
+
+    json.dump(
+        {"states": states.tolist(), "inputs": inputs.tolist()},
+        (Path.cwd() / "rrt_path" / "pendulum_swingup.json").open("w"),
+    )

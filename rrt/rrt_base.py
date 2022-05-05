@@ -192,10 +192,12 @@ class RRT:
             plt.plot([x for (x, y) in self.path], [y for (x, y) in self.path], "-r")
 
     def save(self, path=Path.cwd() / "rrt_path"):
+        states = np.array([(n.p[0], n.p[1]) for n in self.node_path(self.goal.p)])
         np.save(
             path / "states.npy",
-            np.array([(n.p[0], n.p[1]) for n in self.node_path(self.goal.p)]),
+            states,
         )
-        np.save(
-            path / "inputs.npy", np.array([n.u for n in self.node_path(self.goal.p)])
-        )
+        inputs = np.array([n.u for n in self.node_path(self.goal.p)])
+        np.save(path / "inputs.npy", inputs)
+        print(states)
+        print(inputs)
