@@ -371,6 +371,16 @@ def create_cartpole():
     return (plant, context, diagram)
 
 
+def create_pendulum():
+    builder = DiagramBuilder()
+    plant, scene_graph = AddMultibodyPlantSceneGraph(builder, time_step=0.0)
+    Parser(plant).AddModelFromFile("pendulum.urdf")
+    plant.set_name("pendulum")
+    plant.Finalize()
+    context = plant.CreateDefaultContext()
+    return (plant, context, scene_graph, builder)
+
+
 def visualize_system(system):
     display(
         SVG(
