@@ -168,7 +168,8 @@ def ContinuousFittedValueIteration(
         # Create the target network
         Jd[:] = time_step * G + discount_factor * Jnext
         loss_over_time = []
-        for i in range(optimization_steps_per_epoch):
+        i = 0
+        while True:
             # low pass filter target network
             if (i + 1) % 50:
                 alpha = 5e-4
@@ -180,6 +181,11 @@ def ContinuousFittedValueIteration(
             )
             loss_over_time.append(loss)
             optimizer.step(loss, dloss_dparams)
+            if loss < 0.0001 and i > optimization_steps_per_epoch:
+                break
+            if i > 100 * optimization_steps_per_epoch:
+                break
+            i += 1
         last_loss = loss
         clear_output(wait=True)
         display("loss: {:.6} epoch: {:}/{:}".format(last_loss, epoch, epochs))
@@ -281,11 +287,14 @@ def simulate_and_animate(
         input_logger.FindMutableLog(context).Clear()
 
     simulator.Initialize()
+    simulator.set_target_realtime_rate(1.0)
     simulator.AdvanceTo(sim_time)
 
     visualizer.stop_recording()
 
     ani = visualizer.get_recording_as_animation()
+    ani.save("animation.mp4", fps=60)
+
     display(HTML(ani.to_jshtml()))
     visualizer.reset_recording()
 

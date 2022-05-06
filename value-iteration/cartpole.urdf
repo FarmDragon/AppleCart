@@ -1,17 +1,7 @@
 <?xml version="1.0"?>
 <robot xmlns="http://drake.mit.edu"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" name="CartPole">
-    <link name="world">
-        <visual>
-            <origin xyz="0 0 -5" rpy="0 0 0" />
-            <geometry>
-                <box size="1000 1000 10" />
-            </geometry>
-            <material>
-                <color rgba="0.93 .74 .4 1" />
-            </material>
-        </visual>
-    </link>
+    <link name="world"></link>
     <link name="cart">
         <inertial>
             <origin xyz="0 0 .25" rpy="0 0 0" />
