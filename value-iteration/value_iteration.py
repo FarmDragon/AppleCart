@@ -269,6 +269,7 @@ def simulate_and_animate(
     state_logger=None,
     input_logger=None,
     sim_time=5,
+    save_video=False,
 ):
     """
     Simulate the system and produce a video
@@ -293,7 +294,8 @@ def simulate_and_animate(
     visualizer.stop_recording()
 
     ani = visualizer.get_recording_as_animation()
-    ani.save("animation.mp4", fps=60)
+    if save_video:
+        ani.save("animation.mp4", fps=60)
 
     display(HTML(ani.to_jshtml()))
     visualizer.reset_recording()
