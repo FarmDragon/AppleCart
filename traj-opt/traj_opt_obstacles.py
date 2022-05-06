@@ -64,7 +64,7 @@ meshcat = StartMeshcat()
 # Triple cart pole model
 TRIPLE_CARTPOLE_URDF = "../triple_cartpole.urdf"
 SIMULATION_TIMESTEP = 0.01
-FLAT_SIMULATION = False
+FLAT_SIMULATION = True
 MESHCAT_2D_LIMITS = {"xmin": -5, "xmax": 3, "ymin": -3.5, "ymax": 3.5}
 MAX_SIMULATION_TIME = 6  # seconds after which to stop meshcat simulation
 
@@ -72,21 +72,21 @@ MAX_SIMULATION_TIME = 6  # seconds after which to stop meshcat simulation
 # Define helper functions
 def draw_simulation_env(meshcat, FLAT_SIMULATION):
     meshcat.SetObject("apple", Sphere(0.1), Rgba(1, 0, 0, 1))
-    meshcat.SetTransform("apple", RigidTransform([0, 0, 3]))
+    meshcat.SetTransform("apple", RigidTransform([2, 0, 3]))
 
-    # meshcat.SetObject("branch", Cylinder(0.25, 1), Rgba(0.5, 0.4, 0.3, 1))
+    meshcat.SetObject("branch", Cylinder(0.6, 1), Rgba(0.5, 0.4, 0.3, 1))
 
-    # R_GgraspO = RotationMatrix.MakeXRotation(np.pi / 2.0).multiply(
-    #    RotationMatrix.MakeZRotation(np.pi / 2.0)
-    # )
-    # meshcat.SetTransform("branch", RigidTransform(R_GgraspO, [1, 0, 2]))
+    R_GgraspO = RotationMatrix.MakeXRotation(np.pi / 2.0).multiply(
+        RotationMatrix.MakeZRotation(np.pi / 2.0)
+    )
+    meshcat.SetTransform("branch", RigidTransform(R_GgraspO, [0, 0, 1.5]))
 
     # Visualize the obstacles
     meshcat.SetObject("wall1", Box(1, 1, 1), Rgba(0.8, 0.4, 0, 1))
-    meshcat.SetTransform("wall1", RigidTransform([-3, 0, 0]))
+    meshcat.SetTransform("wall1", RigidTransform([-5, 0, 0]))
 
     meshcat.SetObject("wall2", Box(1, 1, 1), Rgba(0.8, 0.4, 0, 1))
-    meshcat.SetTransform("wall2", RigidTransform([3, 0, 0]))
+    meshcat.SetTransform("wall2", RigidTransform([5, 0, 0]))
 
     if FLAT_SIMULATION:
         meshcat.Set2dRenderMode(
@@ -111,7 +111,7 @@ def draw_simulation_env(meshcat, FLAT_SIMULATION):
 # MAX_TIMESTEP = 0.1
 
 # NOTE: These parameters take a while, but the input trajectory is smoother
-NUM_BREAKPOINTS = 161
+NUM_BREAKPOINTS = 191
 MIN_TIMESTEP = 0.00175
 MAX_TIMESTEP = 0.025
 
@@ -134,12 +134,12 @@ prog = dircol.prog()
 
 dircol.AddEqualTimeIntervalsConstraints()
 
-initial_state = [0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+initial_state = [-2, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 prog.AddBoundingBoxConstraint(initial_state, initial_state, dircol.initial_state())
 # More elegant version is blocked by drake #8315:
 # prog.AddLinearConstraint(dircol.initial_state() == initial_state)
 
-final_state = (0.0, np.pi, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+final_state = (2, np.pi, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
 prog.AddBoundingBoxConstraint(final_state, final_state, dircol.final_state())
 # prog.AddLinearConstraint(dircol.final_state() == final_state)
 
@@ -161,8 +161,32 @@ dircol.SetInitialTrajectory(PiecewisePolynomial(), initial_x_trajectory)
 
 # Add obstacles
 x = dircol.state()
-dircol.AddConstraintToAllKnotPoints(x[0] <= 3)
-dircol.AddConstraintToAllKnotPoints(x[0] >= -3)
+dircol.AddConstraintToAllKnotPoints(x[0] <= 4)
+dircol.AddConstraintToAllKnotPoints(x[0] >= -4)
+
+
+# Obstacle location
+obs_x = 0
+obs_y = 1.5
+obs_radius = 0.6
+
+# First constraint to avoid branch
+x1 = x[0] + np.sin(x[1])
+y1 = -np.cos(x[1])
+pendulum1_to_obstacle_squared = np.sqrt((obs_x - x1) ** 2 + (obs_y - y1) ** 2)
+dircol.AddConstraintToAllKnotPoints(pendulum1_to_obstacle_squared >= obs_radius)
+
+# Second constraint to avoid branch
+x2 = x[0] + np.sin(x[1]) + np.sin(x[1] + x[2])
+y2 = -np.cos(x[1]) - np.cos(x[1] + x[2])
+pendulum2_to_obstacle_squared = np.sqrt((obs_x - x2) ** 2 + (obs_y - y2) ** 2)
+dircol.AddConstraintToAllKnotPoints(pendulum2_to_obstacle_squared >= obs_radius)
+
+# Third constraint to avoid branch
+x3 = x[0] + np.sin(x[1]) + np.sin(x[1] + x[2]) + np.sin(x[1] + x[2] + x[3])
+y3 = -np.cos(x[1]) - np.cos(x[1] + x[2]) - np.cos(x[1] + x[2] + x[3])
+pendulum3_to_obstacle_squared = np.sqrt((obs_x - x3) ** 2 + (obs_y - y3) ** 2)
+dircol.AddConstraintToAllKnotPoints(pendulum3_to_obstacle_squared >= obs_radius)
 
 
 # View the constraints that were added to the program
@@ -186,22 +210,6 @@ display(plt.show())
 # Save the trajectory
 x_trajectory = dircol.ReconstructStateTrajectory(result)
 
-# %%
-# v = [0,0,0,0]
-# plant.SetVelocities(context, v)
-M = plant.CalcMassMatrixViaInverseDynamics(context)
-Cv = plant.CalcBiasTerm(context)
-tauG = plant.CalcGravityGeneralizedForces(context)
-B = plant.MakeActuationMatrix()
-forces = MultibodyForces_(plant)
-plant.CalcForceElementsContribution(context, forces)
-tauExt = forces.generalized_forces()
-
-print(M)
-print(Cv)
-print(tauG)
-print(B)
-print(tauExt)
 
 # %%
 # Prepare the simulation of trajectory optimization
@@ -242,23 +250,7 @@ context.SetTime(0)
 
 # run simulation
 meshcat.AddButton("Stop Simulation")
-meshcat.SetObject("apple", Sphere(0.1), Rgba(1, 0, 0, 1))
-meshcat.SetTransform("apple", RigidTransform([0, 0, 3]))
-
-
-# meshcat.SetObject("branch", Cylinder(0.25, 1), Rgba(0.5, 0.4, 0.3, 1))
-
-# R_GgraspO = RotationMatrix.MakeXRotation(np.pi / 2.0).multiply(
-#    RotationMatrix.MakeZRotation(np.pi / 2.0)
-# )
-# meshcat.SetTransform("branch", RigidTransform(R_GgraspO, [1, 0, 2]))
-
-# Visualize the obstacles
-meshcat.SetObject("wall1", Box(1, 1, 1), Rgba(0.8, 0.4, 0, 1))
-meshcat.SetTransform("wall1", RigidTransform([-3, 0, 0]))
-
-meshcat.SetObject("wall2", Box(1, 1, 1), Rgba(0.8, 0.4, 0, 1))
-meshcat.SetTransform("wall2", RigidTransform([3, 0, 0]))
+draw_simulation_env(meshcat, FLAT_SIMULATION)
 
 
 simulator.Initialize()

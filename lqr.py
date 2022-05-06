@@ -10,6 +10,7 @@ from pydrake.all import (
     PlanarSceneGraphVisualizer,
     Simulator,
     Linearize,
+    LogVectorOutput,
     StartMeshcat,
     SceneGraph,
     MeshcatVisualizerCpp,
@@ -18,15 +19,16 @@ from pydrake.all import (
 )
 import os
 import numpy as np
+import pandas as pd
+import seaborn as sns
 from matplotlib import pyplot as plt
-
-
-# %%
-# Start the visualizer (run this cell only once, each instance consumes a port)
-meshcat = StartMeshcat()
+import matplotlib
+from IPython.display import display, clear_output, SVG, HTML
 
 # %%
-def simulate_triple_cartpole():
+def simulate_triple_cartpole(sim_time=10):
+    # make visualization larger
+    matplotlib.rcParams["figure.figsize"] = (10, 10)
 
     # start construction site of our block diagram
     builder = DiagramBuilder()
@@ -38,7 +40,7 @@ def simulate_triple_cartpole():
 
     # set initial unstable equilibrium point
     context = plant.CreateDefaultContext()
-    x_star = [0, np.pi, np.pi, 0, 0, 0, 0, 0]
+    x_star = [0, np.pi, 0, 0, 0, 0, 0, 0]
     context.get_mutable_continuous_state_vector().SetFromVector(x_star)
 
     # weight matrices for the lqr controller
@@ -50,17 +52,24 @@ def simulate_triple_cartpole():
     input_i = plant.get_actuation_input_port().get_index()
     lqr = LinearQuadraticRegulator(plant, context, Q, R, input_port_index=int(input_i))
     lqr = builder.AddSystem(lqr)
-    output_i = plant.get_state_output_port().get_index()
-    cartpole_lin = Linearize(
-        plant, context, input_port_index=input_i, output_port_index=output_i
-    )
     builder.Connect(plant.get_state_output_port(), lqr.get_input_port(0))
     builder.Connect(lqr.get_output_port(0), plant.get_actuation_input_port())
 
-    # Setup visualization
-    MeshcatVisualizerCpp.AddToBuilder(builder, scene_graph, meshcat)
-    meshcat.Delete()
-    meshcat.Set2dRenderMode(xmin=-3, xmax=3, ymin=-1.0, ymax=4)
+    # Add loggers
+    state_logger = LogVectorOutput(plant.get_state_output_port(), builder)
+    state_logger.set_name("state logger")
+
+    input_logger = LogVectorOutput(lqr.get_output_port(), builder)
+    input_logger.set_name("input logger")
+
+    # Add visualizer
+    visualizer = builder.AddSystem(
+        PlanarSceneGraphVisualizer(
+            scene_graph, xlim=[-4.0, 1.0], ylim=[-0.5, 3.2], show=False
+        )
+    )
+    visualizer.set_name("visualizer")
+    builder.Connect(scene_graph.get_query_output_port(), visualizer.get_input_port(0))
 
     # finish building the block diagram
     diagram = builder.Build()
@@ -72,67 +81,70 @@ def simulate_triple_cartpole():
     context = simulator.get_mutable_context()
     context.SetTime(0)
     context.SetContinuousState(
-        np.array([-2, 0.95 * np.pi, 1.05 * np.pi, 0.02 * np.pi, 0, 0, 0, 0])
+        np.array([-2, 0.95 * np.pi, 0.05 * np.pi, 0.02 * np.pi, 0, 0, 0, 0])
     )
 
     # run simulation
-    meshcat.AddButton("Stop Simulation")
+    visualizer.start_recording()
     simulator.Initialize()
     simulator.set_target_realtime_rate(1.0)
+    simulator.AdvanceTo(sim_time)
 
-    state_traj = []
-    input("Press Enter to start simulation")
+    # show visualization
+    visualizer.stop_recording()
+    ani = visualizer.get_recording_as_animation()
+    ani.save("lqr.mp4", fps=60)
+    display(HTML(ani.to_jshtml()))
+    visualizer.reset_recording()
 
-    while meshcat.GetButtonClicks("Stop Simulation") < 1:
-        print("Time:", simulator.get_context().get_time())
-        x = (
-            simulator.get_context()
-            .get_continuous_state()
-            .get_generalized_position()
-            .GetAtIndex(0)
-        )
+    # return the state and input over time
+    state_log = state_logger.FindLog(simulator.get_context())
+    input_log = input_logger.FindLog(simulator.get_context())
+    state_names = list(
+        [
+            "x",
+            "theta_1",
+            "theta_2",
+            "theta_3",
+            "x_dot",
+            "theta_1_dot",
+            "theta_2_dot",
+            "theta_3_dot",
+        ]
+    )
+    df = pd.DataFrame(state_log.data().T, columns=state_names)
+    df["time"] = state_log.sample_times()
+    df["u"] = input_log.data().T
+    return df
 
-        state = (
-            simulator.get_context().get_continuous_state().get_vector().CopyToVector()
-        )
-        state_traj.append(state)
-        if simulator.get_context().get_time() >= 10:
-            break
-        simulator.AdvanceTo(simulator.get_context().get_time() + 0.01)
-    meshcat.DeleteAddedControls()
 
-    return state_traj
-
-
-state_traj = simulate_triple_cartpole()
+results = simulate_triple_cartpole()
 
 # %%
 # Create a plot of the showing the evolution of state variables over time
-fig = plt.figure(figsize=(10, 6))
-ax = fig.add_subplot(311)
-plt.plot([state[0] for state in state_traj])
-plt.title("x")
+fig, (ax1, ax2, ax3, ax4) = plt.subplots(4, 1, figsize=(10, 9))
 
-ax = fig.add_subplot(312)
-plt.plot([state[1] for state in state_traj])
-plt.plot([state[2] for state in state_traj])
-# NOTE: Added pi to joint angle 3 so all angles are of comparable magnitude
-plt.plot([state[3] + np.pi for state in state_traj])
-plt.title("Joint Angles")
+sns.lineplot(data=results, x="time", y="x", ax=ax1)
+ax1.set(ylabel="Cart Position (m)")
 
-ax = fig.add_subplot(313)
-plt.plot([state[5] for state in state_traj])
-plt.plot([state[6] for state in state_traj])
-plt.plot([state[7] for state in state_traj])
-plt.title("Joint Velocities")
+results["theta_1_minus_pi"] = results["theta_1"] - np.pi
+sns.lineplot(data=results, x="time", y="theta_1_minus_pi", ax=ax2)
+sns.lineplot(data=results, x="time", y="theta_2", ax=ax2)
+sns.lineplot(data=results, x="time", y="theta_3", ax=ax2)
+ax2.set(ylabel="Joint Angles (rad)")
+
+sns.lineplot(data=results, x="time", y="theta_1_dot", ax=ax3)
+sns.lineplot(data=results, x="time", y="theta_2_dot", ax=ax3)
+sns.lineplot(data=results, x="time", y="theta_3_dot", ax=ax3)
+ax3.set(ylabel="Joint Velocities (rad/sec)")
+
+sns.lineplot(data=results, x="time", y="u", ax=ax4)
+ax4.set(ylabel="Input (N)")
+
 plt.show()
-
+# %%
 
 # %%
 # An example of a phase portait which could be used for showing ROA slices
-fig = plt.figure()
-ax = fig.add_subplot(111)
-plt.plot([state[1] for state in state_traj], [state[2] for state in state_traj])
-ax.set_aspect("equal", adjustable="box")
-plt.show()
+sns.lineplot(data=results, x="theta_1", y="theta_1_dot", sort=False)
 # %%
