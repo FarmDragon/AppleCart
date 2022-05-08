@@ -9,7 +9,7 @@ from pydrake.all import (
     Simulator,
     PlanarSceneGraphVisualizer,
     ZeroOrderHold,
-    FirstOrderHold,
+    # FirstOrderHold,
     FittedValueIteration,
     DynamicProgrammingOptions,
     SceneGraph,

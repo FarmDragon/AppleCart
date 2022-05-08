@@ -1,3 +1,4 @@
+from audioop import reverse
 from pathlib import Path
 from rrt_base import RRT
 from rrt_star import RRTStar
@@ -111,43 +112,56 @@ def bound(low, high, value):
 
 
 class Pendulum(RRT.Dynamics):
-    def __init__(self, dt=0.1, m=1, g=9.8, l=0.5, b=0.1) -> None:
+    def __init__(self, dt=0.1, m=1, g=9.8, l=0.5, b=0.1, u_max=3) -> None:
         self.dt = dt
+        self.u_max = u_max
+        self.m = m
+        self.g = g
+        self.l = l
+        self.b = b
 
     def calculate_u(self, f, t):
-        u = (
-            (t[1] - f[1]) / self.dt
-            + np.sin(f[0]) * self.m * self.g / self.l
+        return (
+            self.m * self.l**2 * (t[1] - f[1]) / self.dt
+            + np.sin(f[0]) * self.m * self.g * self.l
             + self.b * f[0]
         )
-        return u
 
     def run_forward(self, f, t):
-        u = (t[1] - f[1]) / self.dt + np.sin(f[0])
-        u_star = bound(-0.3, 0.3, u)
-        new_node = RRT.Node(
-            np.array(
-                [
-                    f[0] + f[1] * self.dt,
-                    f[1] - np.sin(f[0]) * self.dt + u_star * self.dt,
-                ]
-            )
-        )
+        u = self.calculate_u(f, t)
+        u_star = bound(-self.u_max, self.u_max, u)
+        new_node = RRT.Node(self.x_new(f, u))
         new_node.u = u_star
         return new_node
+
+    def x_new(self, x, u) -> np.array:
+        return np.array(
+            [
+                x[0] + x[1] * self.dt,
+                (
+                    (u - self.b * x[1]) / (self.m * self.l**2)
+                    - self.g * np.sin(x[0]) / self.l
+                )
+                * self.dt
+                + x[1],
+            ]
+        )
 
     def cost(self, f, t):
         return self.calculate_u(f, t)
 
+    def calculate_reachable_states(self, x: np.array) -> list[np.array]:
+        return set([self.x_new(x, self.u_max), self.x_new(x, self.u_max)])
 
-def test_rrt_for_simple_pendulum_balance(start, goal, bounds, plt):
+
+def test_rrt_for_simple_pendulum_balance(bounds, plt):
     """Models a simple pendulum"""
     rrt = RRT(
         start=np.array([0, 0]),
         goal=np.array([np.pi, 0]),
         bounds=bounds,
         max_extend_length=0.1,
-        max_iter=10000,
+        max_iter=1000,
         dynamics=Pendulum(),
         plt=plt,
     )
@@ -171,7 +185,6 @@ def test_rg_rrt_for_simple_pendulum(start, goal, bounds, obstacles, plt):
     rrt_star.plot()
 
 
-@pytest.mark.skip(reason="no way of currently testing this")
 def test_rrt_star_simple_pendulum(start, goal, bounds, plt):
     """Models a simple pendulum"""
     rrt_star = RRTStar(
@@ -179,8 +192,9 @@ def test_rrt_star_simple_pendulum(start, goal, bounds, plt):
         goal=goal,
         bounds=bounds,
         max_extend_length=0.2,
-        max_iter=10,
+        max_iter=1000,
         dynamics=Pendulum(),
+        connect_circle_dist=3,
         plt=plt,
     )
     rrt_star.plot()
@@ -213,11 +227,11 @@ def test_rrt_star_custom_distance_function(start, goal, bounds, obstacles, plt):
 def test_load_file():
     inputs_path = Path.cwd() / "rrt_path" / "inputs.npy"
     state_path = Path.cwd() / "rrt_path" / "states.npy"
-    inputs = np.load(inputs_path, allow_pickle=True)
-    states = np.load(state_path, allow_pickle=True)
+    inputs = np.load(inputs_path, allow_pickle=True).tolist()
+    states = np.load(state_path, allow_pickle=True).tolist()
     import json
 
     json.dump(
-        {"states": states.tolist(), "inputs": inputs.tolist()},
+        {"states": reverse(states), "inputs": reverse(inputs)},
         (Path.cwd() / "rrt_path" / "pendulum_swingup.json").open("w"),
     )

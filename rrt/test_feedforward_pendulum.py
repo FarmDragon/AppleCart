@@ -135,7 +135,7 @@ def run_trajectory(
     visualizer.stop_recording()
 
     ani = visualizer.get_recording_as_animation()
-    display(HTML(ani.to_jshtml()))
+    ani.save("temp.mp4", fps=60)
     visualizer.reset_recording()
 
     state_log = state_logger.FindLog(simulator.get_context())
@@ -149,129 +149,135 @@ def run_trajectory(
     return df
 
 
-# %%
+def test_run_feedforward_pendulum():
 
-inputs = np.array(
-    [
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-        -0.3,
-        0.3,
-        0.3,
-        -0.3,
-        -0.3,
-        0.3,
-        0.3,
-        -0.3,
-        0.3,
-        -0.2924273695736902,
-        -0.3,
-        -0.3,
-        -0.3,
-        -0.3,
-        -0.3,
-        -0.3,
-        -0.3,
-        -0.3,
-        -0.3,
-        -0.3,
-        -0.3,
-        -0.3,
-        -0.3,
-        -0.3,
-        -0.3,
-        -0.3,
-        -0.3,
-        -0.3,
-        -0.3,
-        -0.3,
-        0.3,
-        -0.3,
-        -0.3,
-        -0.3,
-        -0.3,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-        0.3,
-    ]
-)
+    # %%
 
-df = run_trajectory(inputs=inputs, sim_time=0.1 * len(inputs))
+    inputs = np.load(
+        "/Users/ethankeller/Repos/AppleCart/rrt_path/inputs.npy", allow_pickle=True
+    )
+    inputs = np.array([i for i in inputs])
 
-# %%
-base_chart = alt.Chart(df).encode(
-    alt.X("time:Q", title="Time (s)"),
-)
-input_chart = base_chart.mark_line(color="orange").encode(
-    alt.Y("u:Q", title="Torque (Nm)", axis=alt.Axis(titleColor="orange")),
-)
-theta_1_chart = base_chart.mark_line().encode(
-    alt.Y("theta_1:Q", title="Theta (rad)"),
-)
+    inputs = np.array(
+        [
+            0.3,
+            3000,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            -0.3,
+            0.3,
+            0.3,
+            -0.3,
+            -0.3,
+            0.3,
+            0.3,
+            -0.3,
+            0.3,
+            -0.2924273695736902,
+            -0.3,
+            -0.3,
+            -0.3,
+            -0.3,
+            -0.3,
+            -0.3,
+            -0.3,
+            -0.3,
+            -0.3,
+            -0.3,
+            -0.3,
+            -0.3,
+            -0.3,
+            -0.3,
+            -0.3,
+            -0.3,
+            -0.3,
+            -0.3,
+            -0.3,
+            -0.3,
+            0.3,
+            -0.3,
+            -0.3,
+            -0.3,
+            -0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+            0.3,
+        ]
+    )
 
-alt.layer(input_chart, theta_1_chart).resolve_scale(y="independent")
+    df = run_trajectory(inputs=inputs, sim_time=0.05 * len(inputs))
 
-# %%
+    # %%
+    base_chart = alt.Chart(df).encode(
+        alt.X("time:Q", title="Time (s)"),
+    )
+    input_chart = base_chart.mark_line(color="orange").encode(
+        alt.Y("u:Q", title="Torque (Nm)", axis=alt.Axis(titleColor="orange")),
+    )
+    theta_1_chart = base_chart.mark_line().encode(
+        alt.Y("theta_1:Q", title="Theta (rad)"),
+    )
+
+    alt.layer(input_chart, theta_1_chart).resolve_scale(y="independent")
+
+    # %%

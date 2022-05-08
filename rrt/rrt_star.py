@@ -11,9 +11,9 @@ class RRTStar(RRT):
     def __init__(self, connect_circle_dist=50.0, **kwargs):
         super().__init__(**kwargs)
         self.connect_circle_dist = connect_circle_dist
-        self.path, self.min_cost = self.__plan()
+        self.path, self.min_cost = self.plan()
 
-    def __plan(self):
+    def plan(self):
         """Plans the path from start to goal while avoiding obstacles"""
         self.node_list = [self.start]
         for i in range(self.max_iter):
@@ -113,12 +113,10 @@ class RRTStar(RRT):
     def propagate_cost_to_leaves(self, parent_node):
         """Recursively update the cost of the nodes"""
         parents = set()
-        parents.add(parent_node)
         while len(parents) > 0:
             new_parents = set()
-            for node in self.node_list:
-                for potential_parent in parents:
-                    if node.parent == potential_parent:
-                        node.cost = self.new_cost(potential_parent, node)
-                        new_parents.add(node)
+            for parent in parents:
+                for child in parent.children:
+                    child.cost = self.new_cost(parent, child)
+                    new_parents.add(child)
             parents = new_parents

@@ -21,21 +21,39 @@ class RRT:
         def __init__(self, p):
             self.p = np.array(p)
             self.p.astype(np.float64, copy=False)
-            self.parent = None
+            self._parent = None
             self.u = None
-            self.reachables = None
+            self.children = set()
+
+        @property
+        def parent(self):
+            return self._parent
+
+        @parent.setter
+        def parent(self, parent: "RRT.Node"):
+            parent.children.add(self)
+            if self._parent:
+                self._parent.children.discard(self)
+            self._parent = parent
 
     def __init__(
         self,
-        start,
-        goal,
-        bounds,
-        obstacle_list=[],
+        start=np.array([11, 0]),
+        goal=np.array([6, 8]),
+        bounds=np.array([-2, 15]),
+        obstacle_list=[  # circles parametrized by [x, y, radius]
+            np.array([9, 6, 2]),
+            np.array([9, 8, 1]),
+            np.array([9, 10, 2]),
+            np.array([4, 5, 2]),
+            np.array([7, 5, 2]),
+            np.array([4, 10, 1]),
+        ],
         max_extend_length=0.5,
         path_resolution=0.5,
         goal_sample_rate=0.05,
         max_iter=100,
-        dynamics=None,
+        dynamics=Dynamics(max_extend_length=0.5),
         plt=plt,
     ):
         self.start = self.Node(start)
@@ -48,10 +66,10 @@ class RRT:
         self.obstacle_list = obstacle_list
         self.node_list = []
         self.plt = plt
-        self.dynamics = dynamics if dynamics else RRT.Dynamics(max_extend_length)
-        self.path = self.__plan()
+        self.dynamics = dynamics
+        self.path = None
 
-    def __plan(self):
+    def plan(self):
         """Plans the path from start to goal while avoiding obstacles"""
         self.node_list = [self.start]
         for i in range(self.max_iter):
@@ -79,8 +97,8 @@ class RRT:
                     self.node_list[-1], self.goal, self.max_extend_length
                 )
                 if not self.collision(final_node, self.node_list[-1]):
-                    return self.final_path(self.goal)
-        return None  # cannot find path
+                    self.path = self.final_path(self.goal)
+                    return
 
     def steer(self, from_node, to_node, max_extend_length=np.inf):
         """Connects from_node to a new_node in the direction of to_node
@@ -108,9 +126,15 @@ class RRT:
 
     def get_nearest_node(self, node):
         """Find the nearest node in node_list to node"""
-        dlist = [self.dynamics.distance(node.p, n.p) for n in self.node_list]
+        ind = self.nearest_neighbor_index(node.p, [n.p for n in self.node_list])
+        return self.node_list[ind]
+
+    def nearest_neighbor_index(self, state_to_search_for, states_to_search):
+        dlist = [
+            self.dynamics.distance(s, state_to_search_for) for s in states_to_search
+        ]
         minind = dlist.index(min(dlist))
-        return self.node_list[minind]
+        return minind
 
     def collision(self, node1, node2):
         """Check whether the path connecting node1 and node2
@@ -199,5 +223,3 @@ class RRT:
         )
         inputs = np.array([n.u for n in self.node_path(self.goal.p)])
         np.save(path / "inputs.npy", inputs)
-        print(states)
-        print(inputs)
