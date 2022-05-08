@@ -354,7 +354,7 @@ class RRT_tools:
 def rrt_planning(problem, max_iterations=1000, prob_sample_q_goal=0.05):
     """
     Input:
-        problem (IiwaProblem): instance of a utility class
+        problem: instance of a utility class
         max_iterations: the maximum number of samples to be collected
         prob_sample_q_goal: the probability of sampling q_goal
 

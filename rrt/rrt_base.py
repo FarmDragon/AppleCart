@@ -31,9 +31,9 @@ class RRT:
 
         @parent.setter
         def parent(self, parent: "RRT.Node"):
-            parent.children.add(self)
-            if self._parent:
-                self._parent.children.discard(self)
+            # parent.children.add(self)
+            # if self._parent:
+            #     self._parent.children.discard(self)
             self._parent = parent
 
     def __init__(

@@ -43,3 +43,27 @@ def test_notebook():
     path = rrt_planning(iiwa_problem, 600, 0.05)
     sleep(8)
     iiwa_problem.visualize_path(path)
+
+
+def test_cartpole():
+    class CartPoleProblem:
+        def __init__(self) -> None:
+            self.goal = np.array()
+            self.start = np.array()
+            self.cspace = None
+
+        def safe_path():
+            pass
+
+        def collide():
+            pass
+
+    class CartPoleSim:
+        def __init__(self, meshcat=None) -> None:
+            self.plant = None
+
+        def ExistsCollision():
+            pass
+
+        def DrawStation():
+            pass

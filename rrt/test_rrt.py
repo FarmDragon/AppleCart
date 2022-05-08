@@ -112,7 +112,7 @@ def bound(low, high, value):
 
 
 class Pendulum(RRT.Dynamics):
-    def __init__(self, dt=0.1, m=1, g=9.8, l=0.5, b=0.1, u_max=3) -> None:
+    def __init__(self, dt=0.01, m=1, g=9.8, l=0.5, b=0.1, u_max=2) -> None:
         self.dt = dt
         self.u_max = u_max
         self.m = m
@@ -121,6 +121,10 @@ class Pendulum(RRT.Dynamics):
         self.b = b
 
     def calculate_u(self, f, t):
+        # if t[1] > f[1]:
+        #     return self.u_max
+        # else:
+        #     return -self.u_max
         return (
             self.m * self.l**2 * (t[1] - f[1]) / self.dt
             + np.sin(f[0]) * self.m * self.g * self.l
@@ -154,17 +158,48 @@ class Pendulum(RRT.Dynamics):
         return set([self.x_new(x, self.u_max), self.x_new(x, self.u_max)])
 
 
+@pytest.mark.parametrize(
+    "x,u",
+    [([np.pi - 0.05, 0], 0), ([0, 0], 3), ([0, 0], 4)],
+    ids=["fall", "constant_limited_torque", "constant_escape_torque"],
+)
+def test_pendulum_fall(plt, x, u):
+    start = x
+    plt.figure()
+    ax = plt.gca()
+    plt.axis(
+        [
+            -10,
+            10,
+            -10,
+            10,
+        ]
+    )
+    plt.plot(start[0], start[1], "xr", markersize=10)
+    plt.legend(("start"), loc="upper left")
+    plt.gca().set_aspect("equal")
+    plt.tight_layout()
+    system = Pendulum(dt=0.01)
+    current = start
+    for i in range(1000):
+        new = system.x_new(current, u)
+        plt.plot([current[0], new[0]], [current[1], new[1]], "-g")
+        current = new
+
+
 def test_rrt_for_simple_pendulum_balance(bounds, plt):
     """Models a simple pendulum"""
     rrt = RRT(
         start=np.array([0, 0]),
         goal=np.array([np.pi, 0]),
-        bounds=bounds,
+        obstacle_list=[],
+        bounds=np.array([-6, 6]),
         max_extend_length=0.1,
-        max_iter=1000,
+        max_iter=3500,
         dynamics=Pendulum(),
         plt=plt,
     )
+    rrt.plan()
     rrt.plot()
     rrt.save()
 
@@ -182,6 +217,7 @@ def test_rg_rrt_for_simple_pendulum(start, goal, bounds, obstacles, plt):
         dynamics=Pendulum(),
         plt=plt,
     )
+    rrt_star.plan()
     rrt_star.plot()
 
 
@@ -231,7 +267,9 @@ def test_load_file():
     states = np.load(state_path, allow_pickle=True).tolist()
     import json
 
+    states.reverse()
+    inputs.reverse()
     json.dump(
-        {"states": reverse(states), "inputs": reverse(inputs)},
+        {"states": states, "inputs": inputs},
         (Path.cwd() / "rrt_path" / "pendulum_swingup.json").open("w"),
     )
