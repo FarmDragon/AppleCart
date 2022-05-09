@@ -154,8 +154,8 @@ dircol.AddFinalCost(dircol.time())
 # Providing the initial guess for x(.) as a straight line trajectory
 # between the start and the goal
 initial_x_trajectory = PiecewisePolynomial.FirstOrderHold(
-    [0.0, 4.0], np.column_stack((initial_state, final_state))
-)
+    [0.0, 5.0], np.column_stack((initial_state, final_state))
+)  # Guess that this simulation will take 5s instead of 4 due to obstacle
 dircol.SetInitialTrajectory(PiecewisePolynomial(), initial_x_trajectory)
 
 
@@ -457,11 +457,11 @@ state = log.data()
 # Plot the results of the time varying LQR
 
 fig, ax = plt.subplots(figsize=(14, 6))
-ax.plot(ts, desired_state[0], label="desired")
-ax.set_xlabel("time")
-ax.set_ylabel("cart position")
+ax.plot(ts, desired_state[0], label="Desired")
+ax.set_xlabel("Time (s)")
+ax.set_ylabel("Cart Position (m)")
 
-ax.plot(log.sample_times(), state[0], "r--", label=f"actual")
+ax.plot(log.sample_times(), state[0], "--", label=f"actual")
 
 ax.legend()
 # In case the result blows up, at least see how close it was

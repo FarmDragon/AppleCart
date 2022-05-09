@@ -71,17 +71,12 @@ MAX_SIMULATION_TIME = 6  # seconds after which to stop meshcat simulation
 # %%
 # Define helper functions
 def draw_simulation_env(meshcat, FLAT_SIMULATION):
+
+    # Draw the location of the apple the tip of the upright unstable equilibrium
     meshcat.SetObject("apple", Sphere(0.1), Rgba(1, 0, 0, 1))
     meshcat.SetTransform("apple", RigidTransform([0, 0, 3]))
 
-    # meshcat.SetObject("branch", Cylinder(0.25, 1), Rgba(0.5, 0.4, 0.3, 1))
-
-    # R_GgraspO = RotationMatrix.MakeXRotation(np.pi / 2.0).multiply(
-    #    RotationMatrix.MakeZRotation(np.pi / 2.0)
-    # )
-    # meshcat.SetTransform("branch", RigidTransform(R_GgraspO, [1, 0, 2]))
-
-    # Visualize the obstacles
+    # Visualize the obstacles on the rail
     meshcat.SetObject("wall1", Box(1, 1, 1), Rgba(0.8, 0.4, 0, 1))
     meshcat.SetTransform("wall1", RigidTransform([-3, 0, 0]))
 
@@ -135,20 +130,19 @@ prog = dircol.prog()
 dircol.AddEqualTimeIntervalsConstraints()
 
 initial_state = [0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+# Think of this as dircol.initial_state() == initial_state
 prog.AddBoundingBoxConstraint(initial_state, initial_state, dircol.initial_state())
-# More elegant version is blocked by drake #8315:
-# prog.AddLinearConstraint(dircol.initial_state() == initial_state)
 
 final_state = (0.0, np.pi, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+# Think of this as dircol.final_state() == final_state
 prog.AddBoundingBoxConstraint(final_state, final_state, dircol.final_state())
-# prog.AddLinearConstraint(dircol.final_state() == final_state)
 
-# R = 10
-R = 1000  # Cost on input "effort".
+# NOTE: R = 10, this resulted input trajectories with large jumps
+R = 1000  # Cost on input force
 u = dircol.input()
-dircol.AddRunningCost(R * u[0] ** 2)
+dircol.AddRunningCost(R * u[0] ** 2)  # Quadratic cost
 
-# Add a final cost equal to the total duration.
+# Final cost is to the total duration required
 dircol.AddFinalCost(dircol.time())
 
 # Providing the initial guess for x(.) as a straight line trajectory
@@ -159,7 +153,7 @@ initial_x_trajectory = PiecewisePolynomial.FirstOrderHold(
 dircol.SetInitialTrajectory(PiecewisePolynomial(), initial_x_trajectory)
 
 
-# Add obstacles
+# Add obstacles on the rail
 x = dircol.state()
 dircol.AddConstraintToAllKnotPoints(x[0] <= 3)
 dircol.AddConstraintToAllKnotPoints(x[0] >= -3)
@@ -173,6 +167,7 @@ assert result.is_success()
 
 fig, ax = plt.subplots()
 
+# Create a plot of the open loop input found by trajectory optimization
 u_trajectory = dircol.ReconstructInputTrajectory(result)
 times = np.linspace(u_trajectory.start_time(), u_trajectory.end_time(), 100)
 u_lookup = np.vectorize(u_trajectory.value)
@@ -187,8 +182,7 @@ display(plt.show())
 x_trajectory = dircol.ReconstructStateTrajectory(result)
 
 # %%
-# v = [0,0,0,0]
-# plant.SetVelocities(context, v)
+# Printing the equations of motion
 M = plant.CalcMassMatrixViaInverseDynamics(context)
 Cv = plant.CalcBiasTerm(context)
 tauG = plant.CalcGravityGeneralizedForces(context)
@@ -197,11 +191,11 @@ forces = MultibodyForces_(plant)
 plant.CalcForceElementsContribution(context, forces)
 tauExt = forces.generalized_forces()
 
-print(M)
-print(Cv)
-print(tauG)
-print(B)
-print(tauExt)
+print("M = ", M)
+print("Cv = ", Cv)
+print("tauG = ", tauG)
+print("B = ", B)
+print("tauExt = ", tauExt)
 
 # %%
 # Prepare the simulation of trajectory optimization
@@ -231,9 +225,8 @@ if FLAT_SIMULATION:
 
 diagram = builder.Build()
 
-
 simulator = Simulator(diagram)
-simulator.set_publish_every_time_step(False)  # makes sim faster
+simulator.set_publish_every_time_step(False)  # Makes simulation faster
 
 context = simulator.get_mutable_context()
 # %%
@@ -244,14 +237,6 @@ context.SetTime(0)
 meshcat.AddButton("Stop Simulation")
 meshcat.SetObject("apple", Sphere(0.1), Rgba(1, 0, 0, 1))
 meshcat.SetTransform("apple", RigidTransform([0, 0, 3]))
-
-
-# meshcat.SetObject("branch", Cylinder(0.25, 1), Rgba(0.5, 0.4, 0.3, 1))
-
-# R_GgraspO = RotationMatrix.MakeXRotation(np.pi / 2.0).multiply(
-#    RotationMatrix.MakeZRotation(np.pi / 2.0)
-# )
-# meshcat.SetTransform("branch", RigidTransform(R_GgraspO, [1, 0, 2]))
 
 # Visualize the obstacles
 meshcat.SetObject("wall1", Box(1, 1, 1), Rgba(0.8, 0.4, 0, 1))
@@ -329,7 +314,7 @@ visualizer.PublishRecording()
 log = logger.FindLog(context)
 state = log.data()
 
-ax.plot(log.sample_times(), state[0], label=f"actual")
+ax.plot(log.sample_times(), state[0], "--", label=f"actual")
 ax.legend()
 plt.show()
 # %%
